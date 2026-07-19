@@ -378,7 +378,7 @@ header.scrolled {
 
     .hero-title {
         font-size: clamp(1.8rem, 8.5vw, 3.2rem);
-        white-space: nowrap;
+        white-space: normal;
         margin-bottom: 1.5rem;
         width: 100%;
         text-align: justify;

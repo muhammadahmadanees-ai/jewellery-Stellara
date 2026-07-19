@@ -29,9 +29,9 @@ const Hero = () => {
             WebkitTextFillColor: 'initial',
             backgroundClip: 'unset'
           }}>
-            <span style={{ color: 'var(--brand-gold)', whiteSpace: 'nowrap' }}>Stellar Jewellery,</span>
+            <span style={{ color: 'var(--brand-gold)' }}>Stellar Jewellery,</span>
             <br />
-            <span style={{ color: '#1a1a1c', whiteSpace: 'nowrap' }}>Starry Nights.</span>
+            <span style={{ color: '#1a1a1c' }}>Starry Nights.</span>
           </h1>
           <div className="hero-text-body fade-in-up delay-1" style={{ fontSize: '0.9rem', lineHeight: '1.55', color: '#444', fontFamily: "var(--font-primary)", marginBottom: '1.2rem', textAlign: 'left' }}>
             <p style={{ marginBottom: '0.6rem' }}>
