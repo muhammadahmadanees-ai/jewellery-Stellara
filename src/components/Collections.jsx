@@ -74,6 +74,8 @@ const Collections = ({ onSelectCollection, onOpenProduct }) => {
   const [collections, setCollections] = useState(initialData ? initialData.cols : []);
   const [treeRoots, setTreeRoots] = useState(initialData ? initialData.roots : []);
   const [loading, setLoading] = useState(!cachedSnapshot);
+  const [error, setError] = useState(false);
+  const [loadTimeout, setLoadTimeout] = useState(false);
   
   // Navigation states
   const [activeNode, setActiveNode] = useState(null); // Selected category node in tree
@@ -81,6 +83,12 @@ const Collections = ({ onSelectCollection, onOpenProduct }) => {
 
   useEffect(() => {
     if (cachedSnapshot) return; // Skip if loaded from cache
+
+    const timer = setTimeout(() => {
+      if (loading && collections.length === 0) {
+        setLoadTimeout(true);
+      }
+    }, 6000);
 
     const fetchCollections = async () => {
       try {
@@ -92,12 +100,14 @@ const Collections = ({ onSelectCollection, onOpenProduct }) => {
         setExpandedNodes(initialExpanded);
       } catch (err) {
         console.error("Error fetching collections", err);
+        setError(true);
       } finally {
         setLoading(false);
       }
     };
 
     fetchCollections();
+    return () => clearTimeout(timer);
   }, [cachedSnapshot]);
 
 
@@ -201,8 +211,65 @@ const Collections = ({ onSelectCollection, onOpenProduct }) => {
           <p>Discover our premium range of luxury jewellery, including custom rings, necklaces, and earrings, organized in an elegant catalog.</p>
         </div>
 
-        {loading ? (
+        {loading && !loadTimeout ? (
           <p style={{ textAlign: 'center', padding: '3rem 0' }}>Loading collections catalog...</p>
+        ) : (error || loadTimeout || collections.length === 0) ? (
+          <div style={{
+            maxWidth: '550px',
+            margin: '2rem auto',
+            padding: '2.5rem 2rem',
+            background: '#ffffff',
+            borderRadius: '12px',
+            textAlign: 'center',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.05)',
+            border: '1px solid rgba(0, 0, 0, 0.06)'
+          }}>
+            <div style={{ fontSize: '3rem', color: 'var(--brand-gold)', marginBottom: '1.2rem' }}>
+              <i className="fas fa-wifi"></i>
+            </div>
+            <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#1a1a1c' }}>
+              Connection Issue Detected
+            </h3>
+            <p style={{ fontSize: '0.95rem', color: '#666', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+              We're having trouble loading the catalog. If you are using an ad blocker, privacy tool, or VPN, it might be blocking our database connection.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', alignItems: 'center' }}>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="btn btn-primary"
+                style={{ padding: '0.7rem 2rem', fontSize: '0.85rem', fontWeight: '600', width: '100%', maxWidth: '280px', justifyContent: 'center' }}
+              >
+                Reload Catalog
+              </button>
+              <a 
+                href="https://wa.me/923164934759?text=Hello%20Stellara%20Jewellery!%20%F0%9F%91%8B%20I%20visited%20your%20website%20and%20I'm%20interested%20in%20placing%20an%20order.%20Could%20you%20please%20help%20me%20with%20your%20jewellery%20collections%2C%20pricing%2C%20and%20availability%3F%20Thank%20you!" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="btn-outline"
+                style={{ 
+                  padding: '0.7rem 2rem', 
+                  fontSize: '0.85rem', 
+                  fontWeight: '600', 
+                  width: '100%', 
+                  maxWidth: '280px', 
+                  justifyContent: 'center', 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  borderColor: '#25d366', 
+                  color: '#25d366',
+                  borderRadius: '4px',
+                  border: '1px solid #25d366',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  cursor: 'pointer',
+                  backgroundColor: 'transparent'
+                }}
+              >
+                <i className="fab fa-whatsapp"></i> Chat on WhatsApp
+              </a>
+            </div>
+          </div>
         ) : (
           <div className="category-explorer-layout">
             
