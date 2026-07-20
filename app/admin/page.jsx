@@ -151,6 +151,7 @@ const Admin = () => {
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [replyData, setReplyData] = useState({ orderId: '', name: '', email: '', phone: '', message: '', replyMsg: '' });
   const [replyStatus, setReplyStatus] = useState('');
+  const [expandedOrders, setExpandedOrders] = useState({});
 
   const productDragTimeoutRef = useRef(null);
   const collectionDragTimeoutRef = useRef(null);
@@ -2124,12 +2125,17 @@ STELLARA`;
                     <tr><td colSpan="8">No orders or inquiries found.</td></tr>
                   ) : (
                     filteredOrders.map(order => {
-                      let detailsStr = '';
+                      let fullDetails = '';
                       if (order.type === 'Sample Request') {
-                          detailsStr = `Col: ${order.collection} | Tile: ${order.tile} | Qty: ${order.quantity} | Addr: ${order.address}, ${order.city}`;
+                          fullDetails = `Col: ${order.collection} | Tile: ${order.tile} | Qty: ${order.quantity} | Addr: ${order.address}, ${order.city}`;
                       } else {
-                          detailsStr = order.message ? (order.message.length > 50 ? order.message.substring(0, 50) + '...' : order.message) : '';
+                          fullDetails = order.message || '';
                       }
+
+                      const limit = order.type === 'Sample Request' ? 80 : 50;
+                      const hasMore = fullDetails.length > limit;
+                      const isExpanded = !!expandedOrders[order.id];
+                      const detailsStr = hasMore && !isExpanded ? fullDetails.substring(0, limit) + '...' : fullDetails;
 
                       const qty = parseInt(order.quantity) || 1;
                       const rev = Number(order.selling_price || 0) * qty;
@@ -2160,8 +2166,26 @@ STELLARA`;
                             <span style={{ color: '#999', fontStyle: 'italic' }}>No snapshot price</span>
                           )}
                         </td>
-                        <td style={{ fontSize: '0.85rem' }}>
-                          {detailsStr}
+                        <td style={{ fontSize: '0.85rem', maxWidth: '350px', wordBreak: 'break-word' }}>
+                          <span style={{ whiteSpace: 'pre-wrap' }}>{detailsStr}</span>
+                          {hasMore && (
+                            <button 
+                              onClick={() => setExpandedOrders(prev => ({ ...prev, [order.id]: !prev[order.id] }))}
+                              style={{ 
+                                display: 'inline-block', 
+                                border: 'none', 
+                                background: 'none', 
+                                color: '#3b82f6', 
+                                cursor: 'pointer', 
+                                fontSize: '0.75rem', 
+                                fontWeight: '600', 
+                                marginLeft: '6px',
+                                padding: 0 
+                              }}
+                            >
+                              {isExpanded ? 'Show Less' : 'Read More'}
+                            </button>
+                          )}
                           {order.message && order.message.includes('Payment Receipt: ') && (
                             <div style={{ marginTop: '8px' }}>
                               <a
