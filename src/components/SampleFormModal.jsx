@@ -23,8 +23,8 @@ const SampleFormModal = ({ onClose, initialProduct }) => {
     
     // Create FormData object and map state to it manually
     const submitData = new FormData();
-    submitData.append("access_key", "2a7f202f-6ff3-4475-b717-9bb6c26e5af1");
-    submitData.append("subject", "New Sample Request - LIM Factory");
+    submitData.append("access_key", "c4577e68-950f-4baf-970c-f2149c69a47a");
+    submitData.append("subject", "New Sample Request - STELLARA");
     Object.keys(formData).forEach(key => {
       submitData.append(key, formData[key]);
     });

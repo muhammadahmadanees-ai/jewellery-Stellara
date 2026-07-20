@@ -11,8 +11,8 @@ const Contact = () => {
     btn.style.opacity = '0.8';
 
     const formData = new FormData(form);
-    formData.append("access_key", "2a7f202f-6ff3-4475-b717-9bb6c26e5af1");
-    formData.append("subject", "New General Inquiry - LIM Factory");
+    formData.append("access_key", "c4577e68-950f-4baf-970c-f2149c69a47a");
+    formData.append("subject", "New General Inquiry - STELLARA");
 
     try {
       const response = await fetch('https://api.web3forms.com/submit', {

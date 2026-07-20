@@ -138,7 +138,7 @@ const CheckoutPage = () => {
         ).join('\n');
 
         const emailData = new FormData();
-        emailData.append("access_key", "2a7f202f-6ff3-4475-b717-9bb6c26e5af1");
+        emailData.append("access_key", "c4577e68-950f-4baf-970c-f2149c69a47a");
         emailData.append("subject", `New Cart Order - ${formData.name}`);
         emailData.append("name", formData.name);
         emailData.append("email", formData.email);
