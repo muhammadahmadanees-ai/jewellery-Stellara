@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useCart } from '../../src/components/CartContext';
 import { supabase } from '../../src/supabase';
 import { useRouter } from 'next/navigation';
-import { parseProductImages } from '../../src/components/imageHelper';
+import { parseProductImages, deductProductStock } from '../../src/components/imageHelper';
 
 const CheckoutPage = () => {
   const { cart, cartTotal, clearCart } = useCart();
@@ -129,6 +129,15 @@ const CheckoutPage = () => {
       const { error: dbError } = await supabase.from('orders').insert(orderRows);
       if (dbError) {
         console.error('Database error:', dbError);
+      }
+
+      // Deduct overall stock and color variant stock for each ordered item
+      for (const item of cart) {
+        let colorName = item.color || '';
+        if (!colorName && item.variant && item.variant.toLowerCase().includes('color:')) {
+          colorName = item.variant.replace(/color:/i, '').trim();
+        }
+        await deductProductStock(supabase, item.product, item.quantity, colorName);
       }
 
       // Send email notification via Web3Forms

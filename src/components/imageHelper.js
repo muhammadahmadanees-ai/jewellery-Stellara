@@ -144,3 +144,57 @@ export function isLightColor(colorName) {
   const light = ['white', 'ivory', 'cream', 'pearl', 'beige', 'champagne', 'sand', 'mint', 'lavender', 'peach', 'diamond', 'crystal clear', 'crystalclear'];
   return light.includes((colorName || '').toLowerCase().trim());
 }
+
+/**
+ * Automatically deduct overall stock and color variant stock for a product.
+ * @param {Object} supabase - Supabase client instance
+ * @param {Object} product - Product object
+ * @param {number} qtyToDeduct - Quantity ordered
+ * @param {string} selectedColor - Selected color variant name (optional)
+ */
+export async function deductProductStock(supabase, product, qtyToDeduct, selectedColor) {
+  if (!product || !product.id || !qtyToDeduct || qtyToDeduct <= 0) return;
+
+  const updates = {};
+  const qty = Number(qtyToDeduct) || 1;
+
+  // 1. Deduct overall stock if set
+  if (product.stock !== null && product.stock !== undefined) {
+    updates.stock = Math.max(0, Number(product.stock) - qty);
+  }
+
+  // 2. Parse img field to inspect and deduct color variant stock
+  const parsedImg = parseProductImages(product.img);
+  const colorStock = { ...(parsedImg.colorStock || {}) };
+
+  // Resolve color name (handles strings like "Color: Red" or "Red")
+  let colorName = (selectedColor || '').trim();
+  if (colorName.toLowerCase().startsWith('color:')) {
+    colorName = colorName.replace(/color:/i, '').trim();
+  }
+
+  let colorStockUpdated = false;
+  if (colorName && Object.keys(colorStock).length > 0) {
+    const matchingKey = Object.keys(colorStock).find(k => k.toLowerCase().trim() === colorName.toLowerCase().trim());
+    if (matchingKey && colorStock[matchingKey] !== undefined) {
+      const currentVariantStock = Number(colorStock[matchingKey]) || 0;
+      colorStock[matchingKey] = Math.max(0, currentVariantStock - qty);
+      colorStockUpdated = true;
+    }
+  }
+
+  if (colorStockUpdated) {
+    updates.img = buildProductImgField(parsedImg.images, parsedImg.colors, colorStock);
+  }
+
+  if (Object.keys(updates).length > 0) {
+    try {
+      const { error } = await supabase.from('products').update(updates).eq('id', product.id);
+      if (error) {
+        console.warn(`[deductProductStock] Error updating stock for product ${product.id}:`, error);
+      }
+    } catch (e) {
+      console.warn(`[deductProductStock] Exception updating stock:`, e);
+    }
+  }
+}

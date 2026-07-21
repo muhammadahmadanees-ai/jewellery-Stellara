@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../../src/supabase';
-import { parseProductImages, buildProductImgField } from '../../src/components/imageHelper';
+import { parseProductImages, buildProductImgField, deductProductStock } from '../../src/components/imageHelper';
 import { ReactSortable } from 'react-sortablejs';
 import emailjs from '@emailjs/browser';
 import {
@@ -1617,12 +1617,9 @@ STELLARA`;
       const { error } = await supabase.from('orders').insert([orderData]);
       if (error) throw error;
 
-      // Deduct stock for all items in the bill
+      // Deduct stock for all items in the bill (both overall & color variant stock)
       for (const item of billItems) {
-        if (item.product.stock !== null && item.product.stock !== undefined) {
-          const newStock = Math.max(0, item.product.stock - item.qty);
-          await supabase.from('products').update({ stock: newStock }).eq('id', item.product.id);
-        }
+        await deductProductStock(supabase, item.product, item.qty, item.color);
       }
 
       setBillSaveMsg('Bill saved as single order successfully!');
