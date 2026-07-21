@@ -892,10 +892,14 @@ STELLARA`;
   }, [billSearch, allProductsList]);
 
   const handleAddBillItem = (product) => {
-    const existing = billItems.find(item => item.product.id === product.id && !item.size);
+    const parsed = parseProductImages(product.img);
+    const colorsList = Object.keys(parsed.colors || {});
+    const initialColor = colorsList.length === 1 ? colorsList[0] : '';
+
+    const existing = billItems.find(item => item.product.id === product.id && !item.size && !item.color);
     if (existing) {
       setBillItems(prev => prev.map(item =>
-        item.product.id === product.id && !item.size
+        item.product.id === product.id && !item.size && !item.color
           ? { ...item, qty: item.qty + 1 }
           : item
       ));
@@ -903,6 +907,7 @@ STELLARA`;
       setBillItems(prev => [...prev, {
         product,
         qty: 1,
+        color: initialColor,
         size: '',
         unitPrice: Number(product.price) || 0
       }]);
@@ -921,6 +926,7 @@ STELLARA`;
       if (field === 'qty') return { ...item, qty: Math.max(1, Number(value) || 1) };
       if (field === 'unitPrice') return { ...item, unitPrice: Number(value) || 0 };
       if (field === 'size') return { ...item, size: value };
+      if (field === 'color') return { ...item, color: value };
       return item;
     }));
   };
@@ -947,15 +953,26 @@ STELLARA`;
     const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
     const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-    const itemsHtml = billItems.map((item, i) => `
+    const itemsHtml = billItems.map((item, i) => {
+      const variantParts = [];
+      if (item.color) variantParts.push(`Color: ${item.color}`);
+      if (item.size) variantParts.push(`Size: ${item.size}`);
+      const variantStr = variantParts.join(', ');
+
+      return `
       <tr>
         <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:0.9rem;">${i + 1}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:0.9rem;font-weight:500;">${item.product.name}${item.size ? ` <span style="color:#888;font-weight:normal;">(${item.size})</span>` : ''}${item.product.refcode ? `<br><span style="font-size:0.75rem;color:#999;font-weight:normal;">Ref: ${item.product.refcode}</span>` : ''}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:0.9rem;font-weight:500;">
+          ${item.product.name}
+          ${variantStr ? ` <span style="color:#666;font-size:0.85rem;font-weight:normal;">(${variantStr})</span>` : ''}
+          ${item.product.refcode ? `<br><span style="font-size:0.75rem;color:#999;font-weight:normal;">Ref: ${item.product.refcode}</span>` : ''}
+        </td>
         <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;font-size:0.9rem;">${item.qty}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;font-size:0.9rem;">Rs. ${item.unitPrice.toLocaleString()}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;font-size:0.9rem;font-weight:600;">Rs. ${(item.unitPrice * item.qty).toLocaleString()}</td>
       </tr>
-    `).join('');
+      `;
+    }).join('');
 
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -1334,11 +1351,16 @@ STELLARA`;
 
     const itemsListHtml = billItems.map((item, idx) => {
       const lineTotal = item.unitPrice * item.qty;
+      const variantParts = [];
+      if (item.color) variantParts.push(item.color);
+      if (item.size) variantParts.push(item.size);
+      const variantStr = variantParts.join(' / ');
+
       return `
         <div class="item-row">
           <div>
             <span class="item-name">${item.product.name}</span>
-            ${item.size ? `<span style="color:#888;font-size:0.8rem;"> (${item.size})</span>` : ''}
+            ${variantStr ? `<span style="color:#888;font-size:0.8rem;"> (${variantStr})</span>` : ''}
             <span class="item-qty">× ${item.qty}</span>
           </div>
           <span style="font-weight: 500;">Rs. ${lineTotal.toLocaleString()}</span>
@@ -1576,7 +1598,7 @@ STELLARA`;
           base_price: Number(item.product.base_price) || 0,
           status: 'closed',
           address: billCustomer.address?.trim() || null,
-          message: `Walk-in bill ${billNo}${item.size ? ` | Size: ${item.size}` : ''}${discountPerItem > 0 ? ` | Discount: Rs. ${Math.round(discountPerItem)}` : ''}`
+          message: `Walk-in bill ${billNo}${item.color ? ` | Color: ${item.color}` : ''}${item.size ? ` | Size: ${item.size}` : ''}${discountPerItem > 0 ? ` | Discount: Rs. ${Math.round(discountPerItem)}` : ''}`
         };
 
         const { error } = await supabase.from('orders').insert([orderData]);
@@ -2467,31 +2489,38 @@ STELLARA`;
                   />
                   {billSearchFocused && billSearchResults.length > 0 && (
                     <div style={{ position: 'absolute', top: '100%', left: '0', right: '0', background: 'white', borderRadius: '0 0 12px 12px', boxShadow: '0 10px 30px rgba(0,0,0,0.12)', border: '1px solid #e5e7eb', borderTop: 'none', zIndex: 100, maxHeight: '300px', overflowY: 'auto' }}>
-                      {billSearchResults.map(prod => (
-                        <div
-                          key={prod.id}
-                          onMouseDown={() => handleAddBillItem(prod)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 15px', cursor: 'pointer', borderBottom: '1px solid #f5f5f5', transition: 'background 0.15s' }}
-                          onMouseOver={e => e.currentTarget.style.background = '#f0fdf4'}
-                          onMouseOut={e => e.currentTarget.style.background = 'white'}
-                        >
-                          {prod.img ? (
-                            <div style={{ width: '40px', height: '40px', borderRadius: '6px', backgroundImage: `url(${prod.img})`, backgroundSize: 'cover', backgroundPosition: 'center', border: '1px solid #eee', flexShrink: 0 }} />
-                          ) : (
-                            <div style={{ width: '40px', height: '40px', borderRadius: '6px', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5rem', color: '#ccc', flexShrink: 0 }}>No Img</div>
-                          )}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: '600', fontSize: '0.9rem', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{prod.name}</div>
-                            <div style={{ fontSize: '0.8rem', color: '#888' }}>{prod.refcode || 'No ref code'}</div>
-                          </div>
-                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <div style={{ fontWeight: '700', color: '#10b981' }}>Rs. {Number(prod.price || 0).toLocaleString()}</div>
-                            <div style={{ fontSize: '0.7rem', color: prod.stock === null ? '#888' : prod.stock === 0 ? '#dc2626' : '#16a34a' }}>
-                              {prod.stock === null || prod.stock === undefined ? '∞' : prod.stock === 0 ? 'Sold out' : `${prod.stock} left`}
+                      {billSearchResults.map(prod => {
+                        const parsed = parseProductImages(prod.img);
+                        const colorsList = Object.keys(parsed.colors || {});
+                        return (
+                          <div
+                            key={prod.id}
+                            onMouseDown={() => handleAddBillItem(prod)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 15px', cursor: 'pointer', borderBottom: '1px solid #f5f5f5', transition: 'background 0.15s' }}
+                            onMouseOver={e => e.currentTarget.style.background = '#f0fdf4'}
+                            onMouseOut={e => e.currentTarget.style.background = 'white'}
+                          >
+                            {prod.img ? (
+                              <div style={{ width: '40px', height: '40px', borderRadius: '6px', backgroundImage: `url(${parsed.defaultImg || prod.img})`, backgroundSize: 'cover', backgroundPosition: 'center', border: '1px solid #eee', flexShrink: 0 }} />
+                            ) : (
+                              <div style={{ width: '40px', height: '40px', borderRadius: '6px', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5rem', color: '#ccc', flexShrink: 0 }}>No Img</div>
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: '600', fontSize: '0.9rem', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{prod.name}</div>
+                              <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                                {prod.refcode || 'No ref code'}
+                                {colorsList.length > 0 && <span style={{ color: '#10b981', fontWeight: '500', marginLeft: '6px' }}>({colorsList.length} Color{colorsList.length > 1 ? 's' : ''})</span>}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                              <div style={{ fontWeight: '700', color: '#10b981' }}>Rs. {Number(prod.price || 0).toLocaleString()}</div>
+                              <div style={{ fontSize: '0.7rem', color: prod.stock === null ? '#888' : prod.stock === 0 ? '#dc2626' : '#16a34a' }}>
+                                {prod.stock === null || prod.stock === undefined ? '∞' : prod.stock === 0 ? 'Sold out' : `${prod.stock} left`}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -2512,36 +2541,65 @@ STELLARA`;
                       <thead>
                         <tr style={{ background: '#f9fafb' }}>
                           <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product</th>
-                          <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Size</th>
-                          <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Qty</th>
+                          <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Color</th>
+                          <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Size</th>
+                          <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Qty</th>
                           <th style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Price</th>
                           <th style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total</th>
                           <th style={{ padding: '10px 6px', width: '30px' }}></th>
                         </tr>
                       </thead>
                       <tbody>
-                        {billItems.map((item, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                            <td style={{ padding: '10px 12px' }}>
-                              <div style={{ fontWeight: '600', fontSize: '0.85rem', textTransform: 'uppercase' }}>{item.product.name}</div>
-                              {item.product.refcode && <div style={{ fontSize: '0.7rem', color: '#999' }}>Ref: {item.product.refcode}</div>}
-                            </td>
-                            <td style={{ padding: '10px 6px', textAlign: 'center' }}>
-                              {item.product.sizes && item.product.show_sizes !== false ? (
-                                <select
-                                  value={item.size}
-                                  onChange={e => handleBillItemChange(idx, 'size', e.target.value)}
-                                  style={{ padding: '4px 6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '0.8rem', width: '60px' }}
-                                >
-                                  <option value="">—</option>
-                                  {item.product.sizes.split(',').map(s => s.trim()).filter(Boolean).map(s => (
-                                    <option key={s} value={s}>{s}</option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <span style={{ color: '#ccc', fontSize: '0.8rem' }}>—</span>
-                              )}
-                            </td>
+                        {billItems.map((item, idx) => {
+                          const parsedImg = parseProductImages(item.product.img);
+                          const colorsList = Object.keys(parsedImg.colors || {});
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                              <td style={{ padding: '10px 12px' }}>
+                                <div style={{ fontWeight: '600', fontSize: '0.85rem', textTransform: 'uppercase' }}>{item.product.name}</div>
+                                {item.product.refcode && <div style={{ fontSize: '0.7rem', color: '#999' }}>Ref: {item.product.refcode}</div>}
+                              </td>
+                              <td style={{ padding: '10px 6px', textAlign: 'center' }}>
+                                {colorsList.length > 0 ? (
+                                  <select
+                                    value={item.color || ''}
+                                    onChange={e => handleBillItemChange(idx, 'color', e.target.value)}
+                                    style={{
+                                      padding: '4px 6px',
+                                      borderRadius: '4px',
+                                      border: item.color ? '1px solid #10b981' : '1px solid #ddd',
+                                      fontSize: '0.8rem',
+                                      maxWidth: '90px',
+                                      background: item.color ? '#f0fdf4' : '#fff',
+                                      fontWeight: item.color ? '600' : 'normal',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    <option value="">Select</option>
+                                    {colorsList.map(c => (
+                                      <option key={c} value={c}>{c}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span style={{ color: '#ccc', fontSize: '0.8rem' }}>—</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '10px 6px', textAlign: 'center' }}>
+                                {item.product.sizes && item.product.show_sizes !== false ? (
+                                  <select
+                                    value={item.size || ''}
+                                    onChange={e => handleBillItemChange(idx, 'size', e.target.value)}
+                                    style={{ padding: '4px 6px', borderRadius: '4px', border: item.size ? '1px solid #10b981' : '1px solid #ddd', fontSize: '0.8rem', width: '60px', background: item.size ? '#f0fdf4' : '#fff' }}
+                                  >
+                                    <option value="">—</option>
+                                    {item.product.sizes.split(',').map(s => s.trim()).filter(Boolean).map(s => (
+                                      <option key={s} value={s}>{s}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span style={{ color: '#ccc', fontSize: '0.8rem' }}>—</span>
+                                )}
+                              </td>
                             <td style={{ padding: '10px 6px', textAlign: 'center' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                                 <button
@@ -2582,8 +2640,9 @@ STELLARA`;
                               ><i className="fas fa-times"></i></button>
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
+                        );
+                      })}
+                    </tbody>
                     </table>
                   )}
                 </div>
