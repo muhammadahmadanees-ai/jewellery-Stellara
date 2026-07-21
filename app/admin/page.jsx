@@ -1583,38 +1583,49 @@ STELLARA`;
     const billNo = generateBillNumber();
 
     try {
-      const discountPerItem = billItems.length > 0 ? Number(billDiscount) / billItems.length : 0;
+      const itemsSummaryList = billItems.map(item => {
+        const variantParts = [];
+        if (item.color) variantParts.push(`Color: ${item.color}`);
+        if (item.size) variantParts.push(`Size: ${item.size}`);
+        const variantStr = variantParts.join(', ');
+        return `${item.product.name}${variantStr ? ` (${variantStr})` : ''} × ${item.qty} (Rs. ${(item.unitPrice * item.qty).toLocaleString()})`;
+      });
 
+      const tileSummary = billItems.map(item => `${item.product.name} × ${item.qty}`).join('; ');
+      const firstProduct = billItems[0].product;
+      const collectionName = collectionsList.find(c => c.id === firstProduct.collection_id)?.name || 'Walk-in';
+
+      const totalBaseCost = billItems.reduce((sum, item) => sum + (Number(item.product.base_price) || 0) * item.qty, 0);
+      const finalSellingTotal = billGrandTotal;
+
+      const orderData = {
+        type: 'Walk-in Sale',
+        name: billCustomer.name.trim(),
+        phone: billCustomer.phone.trim() || null,
+        email: billCustomer.email.trim() || null,
+        product_id: firstProduct.id,
+        collection: collectionName,
+        tile: tileSummary,
+        quantity: 1,
+        selling_price: finalSellingTotal,
+        base_price: totalBaseCost,
+        status: 'closed',
+        address: billCustomer.address?.trim() || null,
+        message: `Walk-in Bill: ${billNo}\nItems:\n${itemsSummaryList.map(i => `• ${i}`).join('\n')}${billDiscount > 0 ? `\n\nAdditional Bill Discount: Rs. ${Number(billDiscount).toLocaleString()}` : ''}`
+      };
+
+      const { error } = await supabase.from('orders').insert([orderData]);
+      if (error) throw error;
+
+      // Deduct stock for all items in the bill
       for (const item of billItems) {
-        const collectionName = collectionsList.find(c => c.id === item.product.collection_id)?.name || '';
-        
-        const orderData = {
-          type: 'Walk-in Sale',
-          name: billCustomer.name.trim(),
-          phone: billCustomer.phone.trim() || null,
-          email: billCustomer.email.trim() || null,
-          product_id: item.product.id,
-          collection: collectionName,
-          tile: item.product.name,
-          quantity: item.qty,
-          selling_price: item.unitPrice,
-          base_price: Number(item.product.base_price) || 0,
-          status: 'closed',
-          address: billCustomer.address?.trim() || null,
-          message: `Walk-in bill ${billNo}${item.color ? ` | Color: ${item.color}` : ''}${item.size ? ` | Size: ${item.size}` : ''}${discountPerItem > 0 ? ` | Discount: Rs. ${Math.round(discountPerItem)}` : ''}`
-        };
-
-        const { error } = await supabase.from('orders').insert([orderData]);
-        if (error) throw error;
-
-        // Auto deduct stock
         if (item.product.stock !== null && item.product.stock !== undefined) {
           const newStock = Math.max(0, item.product.stock - item.qty);
           await supabase.from('products').update({ stock: newStock }).eq('id', item.product.id);
         }
       }
 
-      setBillSaveMsg('Bill saved as order successfully!');
+      setBillSaveMsg('Bill saved as single order successfully!');
       fetchOrders();
       fetchAllProducts();
 
