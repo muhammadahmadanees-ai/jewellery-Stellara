@@ -895,6 +895,9 @@ STELLARA`;
     const parsed = parseProductImages(product.img);
     const colorsList = Object.keys(parsed.colors || {});
     const initialColor = colorsList.length === 1 ? colorsList[0] : '';
+    const effectivePrice = (product.discount_price !== null && product.discount_price !== undefined && Number(product.discount_price) > 0)
+      ? Number(product.discount_price)
+      : Number(product.price) || 0;
 
     const existing = billItems.find(item => item.product.id === product.id && !item.size && !item.color);
     if (existing) {
@@ -909,7 +912,7 @@ STELLARA`;
         qty: 1,
         color: initialColor,
         size: '',
-        unitPrice: Number(product.price) || 0
+        unitPrice: effectivePrice
       }]);
     }
     setBillSearch('');
@@ -2492,6 +2495,9 @@ STELLARA`;
                       {billSearchResults.map(prod => {
                         const parsed = parseProductImages(prod.img);
                         const colorsList = Object.keys(parsed.colors || {});
+                        const hasDiscount = prod.discount_price !== null && prod.discount_price !== undefined && Number(prod.discount_price) > 0;
+                        const effectivePrice = hasDiscount ? Number(prod.discount_price) : Number(prod.price || 0);
+
                         return (
                           <div
                             key={prod.id}
@@ -2513,7 +2519,14 @@ STELLARA`;
                               </div>
                             </div>
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                              <div style={{ fontWeight: '700', color: '#10b981' }}>Rs. {Number(prod.price || 0).toLocaleString()}</div>
+                              <div style={{ fontWeight: '700', color: '#10b981' }}>
+                                Rs. {effectivePrice.toLocaleString()}
+                                {hasDiscount && (
+                                  <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '0.75rem', marginLeft: '4px', fontWeight: 'normal' }}>
+                                    Rs. {Number(prod.price || 0).toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
                               <div style={{ fontSize: '0.7rem', color: prod.stock === null ? '#888' : prod.stock === 0 ? '#dc2626' : '#16a34a' }}>
                                 {prod.stock === null || prod.stock === undefined ? '∞' : prod.stock === 0 ? 'Sold out' : `${prod.stock} left`}
                               </div>
