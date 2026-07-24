@@ -2,14 +2,128 @@ import './globals.css';
 import { CartProvider } from '../src/components/CartContext';
 
 export const metadata = {
-  title: 'Stellara Jewellery | Stellar Elegance, Starry Nights',
-  description: 'Discover premium, handcrafted diamonds and precious gemstones by Stellara Jewellery, capturing the essence of light and luxury.',
-  keywords: 'Stellara Jewellery, luxury jewellery, handcrafted diamonds, gold necklaces, starry nights collection, premium rings',
+  metadataBase: new URL('https://stellara.vercel.app'),
+  title: {
+    default: 'Stellara | Artificial Jewellery & China Gold Jewellery Online',
+    template: '%s | Stellara Jewellery',
+  },
+  description:
+    'Shop Stellara – your #1 destination for artificial jewellery, China gold jewellery, imitation jewellery sets, necklaces, earrings & rings. Premium quality at affordable prices.',
+  keywords: [
+    'artificial jewellery',
+    'china gold jewellery',
+    'stellara',
+    'jewellery stellara',
+    'stellara jewellery',
+    'imitation jewellery',
+    'fashion jewellery',
+    'artificial necklace',
+    'artificial earrings',
+    'artificial rings',
+    'gold plated jewellery',
+    'china jewellery online',
+    'artificial jewellery online',
+    'cheap artificial jewellery',
+    'latest artificial jewellery',
+    'bridal artificial jewellery',
+    'artificial jewellery set',
+    'online jewellery store',
+    'buy jewellery online',
+    'affordable gold jewellery',
+  ],
+  authors: [{ name: 'Stellara', url: 'https://stellara.vercel.app' }],
+  creator: 'Stellara',
+  publisher: 'Stellara',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: 'https://stellara.vercel.app',
+  },
   openGraph: {
-    title: 'Stellara Jewellery | Stellar Elegance, Starry Nights',
-    description: 'Discover premium, handcrafted diamonds and precious gemstones by Stellara Jewellery, capturing the essence of light and luxury.',
+    title: 'Stellara | Artificial Jewellery & China Gold Jewellery Online',
+    description:
+      'Shop Stellara – your #1 destination for artificial jewellery, China gold jewellery, imitation jewellery sets, necklaces, earrings & rings.',
+    url: 'https://stellara.vercel.app',
+    siteName: 'Stellara Jewellery',
+    images: [
+      {
+        url: '/hero.png',
+        width: 1200,
+        height: 630,
+        alt: 'Stellara – Artificial & China Gold Jewellery',
+      },
+    ],
+    locale: 'en_US',
     type: 'website',
-  }
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Stellara | Artificial Jewellery & China Gold Jewellery Online',
+    description:
+      'Shop Stellara – your #1 destination for artificial jewellery, China gold jewellery, imitation jewellery sets, necklaces, earrings & rings.',
+    images: ['/hero.png'],
+    creator: '@stellara',
+  },
+  category: 'shopping',
+};
+
+// JSON-LD Structured Data for Google Rich Results
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': 'https://stellara.vercel.app/#organization',
+      name: 'Stellara Jewellery',
+      url: 'https://stellara.vercel.app',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://stellara.vercel.app/logo.png',
+      },
+      description:
+        'Stellara is a premium online store for artificial jewellery, China gold jewellery, and imitation jewellery sets.',
+      sameAs: [],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': 'https://stellara.vercel.app/#website',
+      url: 'https://stellara.vercel.app',
+      name: 'Stellara Jewellery',
+      description:
+        'Shop artificial jewellery, China gold jewellery, necklaces, earrings & rings at Stellara.',
+      publisher: { '@id': 'https://stellara.vercel.app/#organization' },
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: 'https://stellara.vercel.app/?q={search_term_string}',
+        },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+    {
+      '@type': 'Store',
+      '@id': 'https://stellara.vercel.app/#store',
+      name: 'Stellara Jewellery',
+      url: 'https://stellara.vercel.app',
+      description:
+        'Buy artificial jewellery & China gold jewellery online. Explore necklaces, earrings, rings and jewellery sets at Stellara.',
+      image: 'https://stellara.vercel.app/hero.png',
+      priceRange: '$$',
+      currenciesAccepted: 'PKR',
+      paymentAccepted: 'Cash, Credit Card, Bank Transfer',
+      hasMap: '',
+    },
+  ],
 };
 
 export default function RootLayout({ children }) {
@@ -22,6 +136,11 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <link href="https://fonts.cdnfonts.com/css/blanka" rel="stylesheet" />
+        {/* JSON-LD Structured Data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </head>
       <body>
         <CartProvider>
