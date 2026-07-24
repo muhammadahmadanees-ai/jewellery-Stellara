@@ -2,9 +2,10 @@ import './globals.css';
 import { CartProvider } from '../src/components/CartContext';
 
 export const metadata = {
-  metadataBase: new URL('https://jewellerystellara.com'),
+  metadataBase: new URL('https://www.jewellerystellara.com'),
   title: {
     default: 'Stellara | Artificial Jewellery & China Gold Jewellery Online | jewellerystellara.com',
+    // Note: domain shown in title for brand recognition in SERPs
     template: '%s | Stellara Jewellery',
   },
   description:
@@ -31,7 +32,7 @@ export const metadata = {
     'buy jewellery online',
     'affordable gold jewellery',
   ],
-  authors: [{ name: 'Stellara', url: 'https://jewellerystellara.com' }],
+  authors: [{ name: 'Stellara', url: 'https://www.jewellerystellara.com' }],
   creator: 'Stellara',
   publisher: 'Stellara',
   robots: {
@@ -46,17 +47,17 @@ export const metadata = {
     },
   },
   alternates: {
-    canonical: 'https://jewellerystellara.com',
+    canonical: 'https://www.jewellerystellara.com',
   },
   openGraph: {
     title: 'Stellara | Artificial Jewellery & China Gold Jewellery Online',
     description:
       'Shop Stellara – your #1 destination for artificial jewellery, China gold jewellery, imitation jewellery sets, necklaces, earrings & rings.',
-    url: 'https://stellara.vercel.app',
+    url: 'https://www.jewellerystellara.com',
     siteName: 'Stellara Jewellery',
     images: [
       {
-        url: 'https://jewellerystellara.com/hero.png',
+        url: 'https://www.jewellerystellara.com/hero.png',
         width: 1200,
         height: 630,
         alt: 'Stellara – Artificial & China Gold Jewellery',
@@ -82,12 +83,12 @@ const jsonLd = {
   '@graph': [
     {
       '@type': 'Organization',
-      '@id': 'https://jewellerystellara.com/#organization',
+      '@id': 'https://www.jewellerystellara.com/#organization',
       name: 'Stellara Jewellery',
-      url: 'https://stellara.vercel.app',
+      url: 'https://www.jewellerystellara.com',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://jewellerystellara.com/logo.png',
+        url: 'https://www.jewellerystellara.com/logo.png',
       },
       description:
         'Stellara is a premium online store for artificial jewellery, China gold jewellery, and imitation jewellery sets.',
@@ -95,29 +96,29 @@ const jsonLd = {
     },
     {
       '@type': 'WebSite',
-      '@id': 'https://jewellerystellara.com/#website',
-      url: 'https://stellara.vercel.app',
+      '@id': 'https://www.jewellerystellara.com/#website',
+      url: 'https://www.jewellerystellara.com',
       name: 'Stellara Jewellery',
       description:
         'Shop artificial jewellery, China gold jewellery, necklaces, earrings & rings at Stellara.',
-      publisher: { '@id': 'https://jewellerystellara.com/#organization' },
+      publisher: { '@id': 'https://www.jewellerystellara.com/#organization' },
       potentialAction: {
         '@type': 'SearchAction',
         target: {
           '@type': 'EntryPoint',
-          urlTemplate: 'https://jewellerystellara.com/?q={search_term_string}',
+          urlTemplate: 'https://www.jewellerystellara.com/?q={search_term_string}',
         },
         'query-input': 'required name=search_term_string',
       },
     },
     {
       '@type': 'Store',
-      '@id': 'https://jewellerystellara.com/#store',
+      '@id': 'https://www.jewellerystellara.com/#store',
       name: 'Stellara Jewellery',
-      url: 'https://stellara.vercel.app',
+      url: 'https://www.jewellerystellara.com',
       description:
         'Buy artificial jewellery & China gold jewellery online. Explore necklaces, earrings, rings and jewellery sets at Stellara.',
-      image: 'https://jewellerystellara.com/hero.png',
+      image: 'https://www.jewellerystellara.com/hero.png',
       priceRange: '$$',
       currenciesAccepted: 'PKR',
       paymentAccepted: 'Cash, Credit Card, Bank Transfer',

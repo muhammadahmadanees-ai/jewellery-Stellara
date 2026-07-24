@@ -8,4 +8,4 @@ Disallow: /checkout/
 Disallow: /api/
 
 # Sitemap location
-Sitemap: https://jewellerystellara.com/sitemap.xml
+Sitemap: https://www.jewellerystellara.com/sitemap.xml
