@@ -638,10 +638,17 @@ const Admin = () => {
 
   // --- Orders Logic ---
   const updateOrderStatus = async (orderId, newStatus) => {
-    await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+    const target = filteredOrders.find(o => o.id === orderId);
+    if (target && target.groupedOrders && target.groupedOrders.length > 1) {
+      for (const sub of target.groupedOrders) {
+        await supabase.from('orders').update({ status: newStatus }).eq('id', sub.id);
+      }
+    } else {
+      await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+    }
     
     if (newStatus === 'confirmed') {
-      const order = ordersList.find(o => o.id === orderId);
+      const order = ordersList.find(o => o.id === orderId) || (target ? target : null);
       if (order && order.email && order.email !== 'N/A' && order.email.includes('@')) {
         let confirmNum = '';
         if (order.type && order.type.includes('(#')) {
@@ -717,7 +724,14 @@ STELLARA`;
 
   const deleteOrder = async (orderId) => {
     if (window.confirm("Are you sure you want to delete this order record?")) {
-      await supabase.from('orders').delete().eq('id', orderId);
+      const target = filteredOrders.find(o => o.id === orderId);
+      if (target && target.groupedOrders && target.groupedOrders.length > 1) {
+        for (const sub of target.groupedOrders) {
+          await supabase.from('orders').delete().eq('id', sub.id);
+        }
+      } else {
+        await supabase.from('orders').delete().eq('id', orderId);
+      }
       fetchOrders();
     }
   };
@@ -733,6 +747,22 @@ STELLARA`;
       setOrderDateFrom(start.toISOString().split('T')[0]);
       setOrderDateTo(end.toISOString().split('T')[0]);
     }
+  };
+
+  const getOrderGroupKey = (order) => {
+    if (order.message) {
+      const billMatch = order.message.match(/Walk-in [Bb]ill:?\s*(STL-[\w-]+)/i) || order.message.match(/(STL-\d+-\d+)/);
+      if (billMatch) return 'BILL:' + billMatch[1];
+      const confMatch = order.message.match(/Confirmation:\s*(#[A-Z0-9]+)/i);
+      if (confMatch) return 'CONF:' + confMatch[1];
+    }
+    if (order.type) {
+      const confMatch = order.type.match(/\(#([^)]+)\)/);
+      if (confMatch) return 'CONF:#' + confMatch[1];
+      const billMatch = order.type.match(/(STL-\d+-\d+)/);
+      if (billMatch) return 'BILL:' + billMatch[1];
+    }
+    return 'ID:' + order.id;
   };
 
   const filteredOrders = useMemo(() => {
@@ -764,7 +794,46 @@ STELLARA`;
       list = list.filter(o => new Date(o.created_at) <= to);
     }
 
-    return list;
+    // Group items sharing the same bill number or confirmation number
+    const groups = {};
+    const groupKeys = [];
+    list.forEach(o => {
+      const k = getOrderGroupKey(o);
+      if (!groups[k]) {
+        groups[k] = [];
+        groupKeys.push(k);
+      }
+      groups[k].push(o);
+    });
+
+    return groupKeys.map(k => {
+      const items = groups[k];
+      if (items.length === 1) return items[0];
+
+      const primary = items[0];
+      const allTiles = items.map(i => i.tile || 'Product').filter(Boolean).join('; ');
+      
+      const messageParts = [];
+      items.forEach(i => {
+        if (i.message) messageParts.push(i.message);
+      });
+      const combinedMessage = messageParts.join('\n');
+
+      let billNum = '';
+      if (k.startsWith('BILL:')) billNum = k.replace('BILL:', '');
+      let confNum = '';
+      if (k.startsWith('CONF:')) confNum = k.replace('CONF:', '');
+
+      const typeStr = billNum ? `Walk-in Sale (${billNum})` : (confNum ? `Cart Order (${confNum})` : primary.type);
+
+      return {
+        ...primary,
+        type: typeStr,
+        tile: allTiles,
+        message: combinedMessage,
+        groupedOrders: items
+      };
+    });
   }, [ordersList, orderSearch, orderStatusFilter, orderDateFrom, orderDateTo]);
 
   // --- Inventory Stats Computation ---
@@ -1067,6 +1136,174 @@ STELLARA`;
     printWindow.document.close();
   };
 
+  const parseOrderItems = (order, allOrders = []) => {
+    if (order && order.groupedOrders && order.groupedOrders.length > 1) {
+      const allSubItems = [];
+      order.groupedOrders.forEach(g => {
+        const subParsed = parseOrderItems(g, []);
+        allSubItems.push(...subParsed);
+      });
+      if (allSubItems.length > 0) return allSubItems;
+    }
+    let confNum = null;
+    if (order.type && order.type.includes('(#')) {
+      const match = order.type.match(/\(#([^)]+)\)/);
+      if (match) confNum = '#' + match[1];
+    }
+    if (!confNum && order.message && order.message.includes('Confirmation: ')) {
+      const match = order.message.match(/Confirmation:\s*(#[A-Z0-9]+)/);
+      if (match) confNum = match[1];
+    }
+
+    if (confNum && allOrders.length > 0) {
+      const group = allOrders.filter(o => {
+        let oConf = null;
+        if (o.type && o.type.includes('(#')) {
+          const match = o.type.match(/\(#([^)]+)\)/);
+          if (match) oConf = '#' + match[1];
+        }
+        if (!oConf && o.message && o.message.includes('Confirmation: ')) {
+          const match = o.message.match(/Confirmation:\s*(#[A-Z0-9]+)/);
+          if (match) oConf = match[1];
+        }
+        return oConf === confNum;
+      });
+      if (group.length > 1) {
+        return group.map(g => {
+          const q = parseInt(g.quantity) || 1;
+          const p = Number(g.selling_price) || 0;
+          return {
+            name: g.tile || 'Product',
+            qty: q,
+            price: p,
+            lineTotal: p * q
+          };
+        });
+      }
+    }
+
+    if (order.message) {
+      const parsedFromMsg = [];
+      const lines = order.message.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('•') && !trimmed.startsWith('-')) continue;
+        const content = trimmed.replace(/^[•\-]\s*/, '');
+
+        const qtyMatch = content.match(/^(.*?)\s*×\s*(\d+)(?:\s*(?:\(Rs\.?\s*([\d,]+)\)|[—\-]\s*Rs\.?\s*([\d,]+)))?/i);
+        if (qtyMatch) {
+          const name = qtyMatch[1].trim();
+          const qty = parseInt(qtyMatch[2]) || 1;
+          const rawPrice = qtyMatch[3] || qtyMatch[4];
+          const price = rawPrice ? Number(rawPrice.replace(/,/g, '')) : 0;
+
+          parsedFromMsg.push({
+            name,
+            qty,
+            price: price > 0 ? (price / qty) : (Number(order.selling_price) || 0),
+            lineTotal: price > 0 ? price : (Number(order.selling_price) || 0)
+          });
+        }
+      }
+
+      if (parsedFromMsg.length > 0) {
+        return parsedFromMsg;
+      }
+    }
+
+    if (order.tile && order.tile.includes(';')) {
+      const parts = order.tile.split(';');
+      const totalSelling = Number(order.selling_price) || 0;
+      const approxPrice = totalSelling > 0 ? (totalSelling / parts.length) : 0;
+      return parts.map(part => {
+        const trimmed = part.trim();
+        const m = trimmed.match(/^(.*?)\s*×\s*(\d+)$/);
+        if (m) {
+          const q = parseInt(m[2]) || 1;
+          return {
+            name: m[1].trim(),
+            qty: q,
+            price: approxPrice,
+            lineTotal: approxPrice * q
+          };
+        }
+        return {
+          name: trimmed,
+          qty: 1,
+          price: approxPrice,
+          lineTotal: approxPrice
+        };
+      });
+    }
+
+    const q = parseInt(order.quantity) || 1;
+    const p = Number(order.selling_price) || 0;
+    return [{
+      name: order.tile || 'Product',
+      qty: q,
+      price: p,
+      lineTotal: p * q
+    }];
+  };
+
+  const calculateOrderFinancials = (order, allOrders = [], productsList = []) => {
+    const parsedItems = parseOrderItems(order, allOrders);
+    const qty = parseInt(order.quantity) || 1;
+
+    let itemsSubtotal = 0;
+    let totalCostFromItems = 0;
+
+    if (parsedItems && parsedItems.length > 0) {
+      parsedItems.forEach(item => {
+        const itemQty = item.qty || 1;
+        const itemNameClean = (item.name || '').toLowerCase().trim();
+
+        const matchedProduct = productsList.find(p => {
+          const pNameClean = (p.name || '').toLowerCase().trim();
+          return pNameClean === itemNameClean || itemNameClean.startsWith(pNameClean) || pNameClean.startsWith(itemNameClean);
+        });
+
+        if (matchedProduct) {
+          // Use discounted price if available on catalog product
+          const effectiveSellingPrice = (matchedProduct.discount_price !== null && matchedProduct.discount_price !== undefined && Number(matchedProduct.discount_price) > 0)
+            ? Number(matchedProduct.discount_price)
+            : (item.price > 0 ? item.price : Number(matchedProduct.price || 0));
+
+          itemsSubtotal += effectiveSellingPrice * itemQty;
+
+          if (matchedProduct.base_price !== null && matchedProduct.base_price !== undefined) {
+            totalCostFromItems += (Number(matchedProduct.base_price) || 0) * itemQty;
+          }
+        } else {
+          itemsSubtotal += (item.lineTotal > 0 ? item.lineTotal : (item.price * itemQty));
+        }
+      });
+    }
+
+    let additionalDiscount = 0;
+    if (order.message && order.message.includes('Additional Bill Discount: Rs.')) {
+      const discMatch = order.message.match(/Additional Bill Discount:\s*Rs\.\s*([\d,]+)/i);
+      if (discMatch) {
+        additionalDiscount = Number(discMatch[1].replace(/,/g, ''));
+      }
+    }
+
+    const rev = itemsSubtotal > 0 ? Math.max(0, itemsSubtotal - additionalDiscount) : (Number(order.selling_price || 0) * qty);
+
+    let cost = totalCostFromItems;
+    if (cost === 0) {
+      if (order.groupedOrders && order.groupedOrders.length > 1) {
+        cost = order.groupedOrders.reduce((sum, g) => sum + (Number(g.base_price || 0) * (parseInt(g.quantity) || 1)), 0);
+      } else {
+        cost = Number(order.base_price || 0) * qty;
+      }
+    }
+
+    const profit = rev - cost;
+
+    return { rev, cost, profit, parsedItems };
+  };
+
   const handlePrintParcelReceipt = (order) => {
     let confNum = null;
     if (order.type && order.type.includes('(#')) {
@@ -1083,61 +1320,45 @@ STELLARA`;
       orderId = '#' + (order.id ? (order.id.includes('-') ? order.id.split('-')[0].toUpperCase() : order.id.substring(0, 8).toUpperCase()) : 'N/A');
     }
 
-    let orderItems = [];
-    if (confNum) {
-      orderItems = ordersList.filter(o => {
-        let oConf = null;
-        if (o.type && o.type.includes('(#')) {
-          const match = o.type.match(/\(#([^)]+)\)/);
-          if (match) oConf = '#' + match[1];
-        }
-        if (!oConf && o.message && o.message.includes('Confirmation: ')) {
-          const match = o.message.match(/Confirmation:\s*(#[A-Z0-9]+)/);
-          if (match) oConf = match[1];
-        }
-        return oConf === confNum;
-      });
+    const parsedItems = parseOrderItems(order, ordersList);
+
+    let itemsSubtotal = parsedItems.reduce((sum, item) => sum + item.lineTotal, 0);
+
+    let additionalDiscount = 0;
+    if (order.message && order.message.includes('Additional Bill Discount: Rs.')) {
+      const discMatch = order.message.match(/Additional Bill Discount:\s*Rs\.\s*([\d,]+)/i);
+      if (discMatch) {
+        additionalDiscount = Number(discMatch[1].replace(/,/g, ''));
+      }
     }
 
-    if (orderItems.length === 0) {
-      orderItems = [order];
-    }
-
-    let subtotal = 0;
-    orderItems.forEach(item => {
-      const qty = parseInt(item.quantity) || 1;
-      const price = Number(item.selling_price) || 0;
-      subtotal += price * qty;
-    });
+    const subtotal = itemsSubtotal;
+    const discountedSubtotal = Math.max(0, subtotal - additionalDiscount);
 
     let shippingCharge = 200;
-    const firstItem = orderItems[0];
-    if (firstItem.message) {
-      if (firstItem.message.includes('Shipping Charge: Free') || 
-          firstItem.message.toLowerCase().includes('shipping charge: 0') || 
-          firstItem.message.toLowerCase().includes('free shipping')) {
+    if (order.message) {
+      if (order.message.includes('Shipping Charge: Free') || 
+          order.message.toLowerCase().includes('shipping charge: 0') || 
+          order.message.toLowerCase().includes('free shipping')) {
         shippingCharge = 0;
       } else {
-        const match = firstItem.message.match(/Shipping Charge:\s*Rs\.\s*(\d+)/i) || 
-                      firstItem.message.match(/Shipping Charge:\s*(\d+)/i);
+        const match = order.message.match(/Shipping Charge:\s*Rs\.\s*(\d+)/i) || 
+                      order.message.match(/Shipping Charge:\s*(\d+)/i);
         if (match) {
           shippingCharge = Number(match[1]);
         }
       }
     }
-    const totalAmount = subtotal + shippingCharge;
+    const totalAmount = discountedSubtotal + shippingCharge;
 
-    const itemsListHtml = orderItems.map((item, idx) => {
-      const qty = parseInt(item.quantity) || 1;
-      const price = Number(item.selling_price) || 0;
-      const lineTotal = price * qty;
+    const itemsListHtml = parsedItems.map((item) => {
       return `
         <div class="item-row">
           <div>
-            <span class="item-name">${item.tile || 'Product'}</span>
-            <span class="item-qty">× ${qty}</span>
+            <span class="item-name">${item.name}</span>
+            <span class="item-qty">× ${item.qty}</span>
           </div>
-          <span style="font-weight: 500;">Rs. ${lineTotal.toLocaleString()}</span>
+          <span style="font-weight: 500;">Rs. ${item.lineTotal.toLocaleString()}</span>
         </div>
       `;
     }).join('');
@@ -1319,6 +1540,12 @@ STELLARA`;
                 <span>Subtotal</span>
                 <span>Rs. ${subtotal.toLocaleString()}</span>
               </div>
+              ${additionalDiscount > 0 ? `
+              <div class="price-row" style="color: #dc2626;">
+                <span>Discount</span>
+                <span>- Rs. ${additionalDiscount.toLocaleString()}</span>
+              </div>
+              ` : ''}
               <div class="price-row">
                 <span>Delivery Charge</span>
                 <span>${shippingCharge > 0 ? `Rs. ${shippingCharge.toLocaleString()}` : 'Free'}</span>
@@ -1330,7 +1557,7 @@ STELLARA`;
             </div>
             
             <div class="formula-box">
-              Rs. ${subtotal.toLocaleString()} (Total) + Rs. ${shippingCharge.toLocaleString()} (Delivery Charge) = Rs. ${totalAmount.toLocaleString()} (Total Amount)
+              Rs. ${discountedSubtotal.toLocaleString()} (Total) + Rs. ${shippingCharge.toLocaleString()} (Delivery Charge) = Rs. ${totalAmount.toLocaleString()} (Total Amount)
             </div>
           </div>
         </div>
@@ -1350,7 +1577,9 @@ STELLARA`;
     const shippingCharge = Number(deliveryInput) || 0;
 
     const subtotal = billSubtotal;
-    const totalAmount = subtotal + shippingCharge;
+    const discount = Number(billDiscount) || 0;
+    const discountedSubtotal = billGrandTotal;
+    const totalAmount = discountedSubtotal + shippingCharge;
 
     const itemsListHtml = billItems.map((item, idx) => {
       const lineTotal = item.unitPrice * item.qty;
@@ -1525,7 +1754,7 @@ STELLARA`;
             <div class="section-title">Recipient Details (To)</div>
             <div class="info-group">
               <div class="info-label">Order ID</div>
-              <div class="info-value" style="font-weight: 700; color: #8B1A1A;">${billNo}</div>
+              <div class="info-value" style="font-weight: 700; color: #8B1A1A;">${generateBillNumber()}</div>
             </div>
             <div class="info-group">
               <div class="info-label">Customer Name</div>
@@ -1552,6 +1781,12 @@ STELLARA`;
                 <span>Subtotal</span>
                 <span>Rs. ${subtotal.toLocaleString()}</span>
               </div>
+              ${discount > 0 ? `
+              <div class="price-row" style="color: #dc2626;">
+                <span>Discount</span>
+                <span>- Rs. ${discount.toLocaleString()}</span>
+              </div>
+              ` : ''}
               <div class="price-row">
                 <span>Delivery Charge</span>
                 <span>${shippingCharge > 0 ? `Rs. ${shippingCharge.toLocaleString()}` : 'Free'}</span>
@@ -1563,7 +1798,7 @@ STELLARA`;
             </div>
             
             <div class="formula-box">
-              Rs. ${subtotal.toLocaleString()} (Total) + Rs. ${shippingCharge.toLocaleString()} (Delivery Charge) = Rs. ${totalAmount.toLocaleString()} (Total Amount)
+              Rs. ${discountedSubtotal.toLocaleString()} (Total) + Rs. ${shippingCharge.toLocaleString()} (Delivery Charge) = Rs. ${totalAmount.toLocaleString()} (Total Amount)
             </div>
           </div>
         </div>
@@ -1753,9 +1988,24 @@ STELLARA`;
 
     const weeksData = [0, 0, 0, 0];
 
-    ordersList.forEach(order => {
-      if (order.created_at) {
-        const d = new Date(order.created_at);
+    // Group orders to calculate accurate stats without double-counting
+    const groups = {};
+    const groupKeys = [];
+    ordersList.forEach(o => {
+      const k = getOrderGroupKey(o);
+      if (!groups[k]) {
+        groups[k] = [];
+        groupKeys.push(k);
+      }
+      groups[k].push(o);
+    });
+
+    groupKeys.forEach(k => {
+      const items = groups[k];
+      const primary = items[0];
+
+      if (primary.created_at) {
+        const d = new Date(primary.created_at);
         if (d > oneWeekAgo) weekCount++;
         else if (d > twoWeeksAgo) lastWeekCount++;
         
@@ -1769,20 +2019,18 @@ STELLARA`;
         else if (diffDays >= 21 && diffDays < 28) weeksData[0]++;
       }
 
-      if (order.type === 'Sample Request' || order.type === 'Inquiry') sampleRequests++;
+      if (primary.type === 'Sample Request' || primary.type === 'Inquiry') sampleRequests++;
       else generalInquiries++;
 
-      const s = (order.status || 'new').toLowerCase();
+      const s = (primary.status || 'new').toLowerCase();
       if (statusCounts[s] !== undefined) statusCounts[s]++;
 
-      // Price accumulations
-      const qty = parseInt(order.quantity) || 1;
-      const sellPrice = Number(order.selling_price) || 0;
-      const costPrice = Number(order.base_price) || 0;
+      const repOrder = items.length > 1 ? { ...primary, groupedOrders: items } : primary;
+      const { rev, cost, profit } = calculateOrderFinancials(repOrder, ordersList, allProductsList);
 
-      totalRevenue += sellPrice * qty;
-      totalCost += costPrice * qty;
-      totalProfit += (sellPrice - costPrice) * qty;
+      totalRevenue += rev;
+      totalCost += cost;
+      totalProfit += profit;
     });
 
     let weekDelta = lastWeekCount === 0 ? 100 : Math.round(((weekCount - lastWeekCount) / lastWeekCount) * 100);
@@ -1804,7 +2052,7 @@ STELLARA`;
       sampleRequests, generalInquiries,
       totalRevenue, totalCost, totalProfit, profitMargin
     };
-  }, [ordersList]);
+  }, [ordersList, allProductsList]);
 
   // Chart configs
   const barData = {
@@ -2170,10 +2418,7 @@ STELLARA`;
                       const isExpanded = !!expandedOrders[order.id];
                       const detailsStr = hasMore && !isExpanded ? fullDetails.substring(0, limit) + '...' : fullDetails;
 
-                      const qty = parseInt(order.quantity) || 1;
-                      const rev = Number(order.selling_price || 0) * qty;
-                      const cost = Number(order.base_price || 0) * qty;
-                      const profit = rev - cost;
+                      const { rev, cost, profit } = calculateOrderFinancials(order, ordersList, allProductsList);
 
                       return (
                       <tr key={order.id}>

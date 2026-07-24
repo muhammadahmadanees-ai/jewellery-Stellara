@@ -215,23 +215,6 @@ const ProductModal = ({ product, onClose, onOpenLightbox, onOpenSampleForm }) =>
             </div>
           )}
           
-          {isSoldOut && (
-            <div style={{
-              background: '#dc2626', color: '#fff', fontWeight: 'bold',
-              padding: '8px 16px', borderRadius: '6px', fontSize: '0.95rem',
-              letterSpacing: '1.5px', textAlign: 'center', marginBottom: '10px',
-              boxShadow: '0 2px 8px rgba(220,38,38,0.25)'
-            }}>SOLD OUT</div>
-          )}
-          {selectedColorStock !== null && selectedColorStock !== undefined && selectedColorStock > 0 && selectedColorStock <= 2 && (
-            <div style={{
-              background: '#fef3c7', color: '#92400e', fontWeight: '600',
-              padding: '6px 14px', borderRadius: '6px', fontSize: '0.85rem',
-              textAlign: 'center', marginBottom: '10px',
-              border: '1px solid #fcd34d'
-            }}>⚡ Only {selectedColorStock} left in stock!</div>
-          )}
-          
           <div className="pm-desc">
             {(() => {
               const text = (product.desc || product.description || '').trim();
@@ -449,17 +432,30 @@ const ProductModal = ({ product, onClose, onOpenLightbox, onOpenSampleForm }) =>
             </>
           )}
 
-          <div className="pm-buttons-row">
-            <button 
-              className="pm-btn-inquire" 
-              onClick={handleAddToCart} 
-              disabled={isSoldOut} 
-              style={isSoldOut ? { opacity: 0.4, cursor: 'not-allowed' } : addedToCart ? { background: '#16a34a' } : {}}
-            >
-              {isSoldOut ? 'SOLD OUT' : addedToCart ? '✓ ADDED!' : (
-                <><i className="fas fa-shopping-bag" style={{ marginRight: '6px' }}></i>ADD TO CART</>
-              )}
-            </button>
+          <div className="pm-bottom-actions">
+            {isSoldOut && (
+              <div className="pm-stock-alert sold-out">
+                SOLD OUT
+              </div>
+            )}
+            {!isSoldOut && selectedColorStock !== null && selectedColorStock !== undefined && selectedColorStock > 0 && selectedColorStock <= 5 && (
+              <div className="pm-stock-alert low-stock">
+                ⚡ Only {selectedColorStock} left in stock!
+              </div>
+            )}
+
+            <div className="pm-buttons-row">
+              <button 
+                className="pm-btn-inquire" 
+                onClick={handleAddToCart} 
+                disabled={isSoldOut} 
+                style={isSoldOut ? { opacity: 0.4, cursor: 'not-allowed' } : addedToCart ? { background: '#16a34a' } : {}}
+              >
+                {isSoldOut ? 'SOLD OUT' : addedToCart ? '✓ ADDED!' : (
+                  <><i className="fas fa-shopping-bag" style={{ marginRight: '6px' }}></i>ADD TO CART</>
+                )}
+              </button>
+            </div>
           </div>
         </div>
         
