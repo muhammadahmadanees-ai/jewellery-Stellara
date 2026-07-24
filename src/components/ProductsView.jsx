@@ -4,6 +4,8 @@ import { supabase, fetchProductsCached, getProductsCache } from '../supabase';
 import { useCart } from './CartContext';
 import { parseProductImages, getColorHex, isLightColor } from './imageHelper';
 
+const PRODUCTS_PER_PAGE = 15;
+
 const ShrinkText = ({ text }) => {
   return (
     <h3 style={{
@@ -26,6 +28,7 @@ const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox })
   const { addToCart } = useCart();
   const [addedIds, setAddedIds] = useState({});
   const [hoveredImages, setHoveredImages] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
 
   const processProducts = (rawProducts) => {
     const prods = [];
@@ -61,6 +64,7 @@ const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox })
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    setCurrentPage(1); // reset to page 1 on collection change
     if (!collectionData) return;
     
     // Check if we already have cache for this specific collection to avoid loading state flicker when collectionData changes
@@ -119,6 +123,18 @@ const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox })
 
   if (!collectionData) return null;
 
+  const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
+  const paginatedProducts = products.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE
+  );
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    const el = document.getElementById('products-view');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
     <section id="products-view" className="section">
       <div className="container">
@@ -127,7 +143,14 @@ const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox })
             &larr; Back to Collections
           </button>
           <h2 id="products-view-title" style={{ fontWeight: 'bold' }}>{collectionData.name}</h2>
-          <p>Select a product to view detailed specifications.</p>
+          <p>
+            Select a product to view detailed specifications.
+            {!loading && products.length > 0 && (
+              <span style={{ color: '#888', fontSize: '0.85rem', marginLeft: '8px' }}>
+                ({products.length} product{products.length !== 1 ? 's' : ''}{totalPages > 1 ? ` — Page ${currentPage} of ${totalPages}` : ''})
+              </span>
+            )}
+          </p>
         </div>
 
         {loading ? (
@@ -136,7 +159,7 @@ const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox })
           <p style={{ textAlign: 'center' }}>No products found in this collection.</p>
         ) : (
           <div className="grid" id="products-container">
-            {products.map(prod => {
+            {paginatedProducts.map(prod => {
               const parsedImg = parseProductImages(prod.img);
               const displayImg = hoveredImages[prod.id] || parsedImg.defaultImg;
               const hasColors = Object.keys(parsedImg.colors).length > 0;
@@ -306,6 +329,82 @@ const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox })
               </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && totalPages > 1 && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px',
+            marginTop: '3rem',
+            flexWrap: 'wrap',
+          }}>
+            {/* Prev button */}
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              style={{
+                padding: '8px 18px',
+                borderRadius: '6px',
+                border: '1.5px solid #8B1A1A',
+                background: currentPage === 1 ? '#f5f5f5' : '#8B1A1A',
+                color: currentPage === 1 ? '#bbb' : '#fff',
+                fontWeight: '600',
+                fontSize: '0.85rem',
+                cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                letterSpacing: '0.3px',
+              }}
+            >
+              ← Prev
+            </button>
+
+            {/* Page number buttons */}
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => handlePageChange(page)}
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '6px',
+                  border: '1.5px solid #8B1A1A',
+                  background: page === currentPage ? '#8B1A1A' : 'transparent',
+                  color: page === currentPage ? '#fff' : '#8B1A1A',
+                  fontWeight: page === currentPage ? '700' : '500',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: page === currentPage ? '0 2px 8px rgba(139,26,26,0.25)' : 'none',
+                  transform: page === currentPage ? 'scale(1.1)' : 'scale(1)',
+                }}
+              >
+                {page}
+              </button>
+            ))}
+
+            {/* Next button */}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              style={{
+                padding: '8px 18px',
+                borderRadius: '6px',
+                border: '1.5px solid #8B1A1A',
+                background: currentPage === totalPages ? '#f5f5f5' : '#8B1A1A',
+                color: currentPage === totalPages ? '#bbb' : '#fff',
+                fontWeight: '600',
+                fontSize: '0.85rem',
+                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                letterSpacing: '0.3px',
+              }}
+            >
+              Next →
+            </button>
           </div>
         )}
       </div>
