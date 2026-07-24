@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <!-- Homepage -->
+  <url>
+    <loc>https://stellara.vercel.app/</loc>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://stellara.vercel.app/hero.png</image:loc>
+      <image:title>Stellara – Artificial Jewellery &amp; China Gold Jewellery</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://stellara.vercel.app/necklaces_grid.png</image:loc>
+      <image:title>Stellara Artificial Necklaces Collection</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://stellara.vercel.app/earrings_grid.png</image:loc>
+      <image:title>Stellara Artificial Earrings Collection</image:title>
+    </image:image>
+  </url>
+
+  <!-- Checkout page (public-facing) -->
+  <url>
+    <loc>https://stellara.vercel.app/checkout/</loc>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+</urlset>
