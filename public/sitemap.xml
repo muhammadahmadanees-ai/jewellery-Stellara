@@ -4,27 +4,27 @@
 
   <!-- Homepage -->
   <url>
-    <loc>https://stellara.vercel.app/</loc>
+    <loc>https://jewellerystellara.com/</loc>
     <lastmod>2026-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://stellara.vercel.app/hero.png</image:loc>
+      <image:loc>https://jewellerystellara.com/hero.png</image:loc>
       <image:title>Stellara – Artificial Jewellery &amp; China Gold Jewellery</image:title>
     </image:image>
     <image:image>
-      <image:loc>https://stellara.vercel.app/necklaces_grid.png</image:loc>
+      <image:loc>https://jewellerystellara.com/necklaces_grid.png</image:loc>
       <image:title>Stellara Artificial Necklaces Collection</image:title>
     </image:image>
     <image:image>
-      <image:loc>https://stellara.vercel.app/earrings_grid.png</image:loc>
+      <image:loc>https://jewellerystellara.com/earrings_grid.png</image:loc>
       <image:title>Stellara Artificial Earrings Collection</image:title>
     </image:image>
   </url>
 
   <!-- Checkout page (public-facing) -->
   <url>
-    <loc>https://stellara.vercel.app/checkout/</loc>
+    <loc>https://jewellerystellara.com/checkout/</loc>
     <lastmod>2026-07-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

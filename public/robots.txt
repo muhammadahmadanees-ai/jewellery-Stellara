@@ -8,4 +8,4 @@ Disallow: /checkout/
 Disallow: /api/
 
 # Sitemap location
-Sitemap: https://stellara.vercel.app/sitemap.xml
+Sitemap: https://jewellerystellara.com/sitemap.xml
