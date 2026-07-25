@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { supabase, prefetchData, getProductByIdFromCache } from '../src/supabase';
+import React, { useState, useEffect, useRef } from 'react';
+import { supabase, prefetchData, getProductByIdFromCache, fetchCollectionsCached, fetchProductsCached } from '../src/supabase';
 import Navbar from '../src/components/Navbar';
 import Hero from '../src/components/Hero';
 import Collections from '../src/components/Collections';
@@ -20,10 +20,27 @@ import ScrollToTop from '../src/components/ScrollToTop';
 import WhatsAppButton from '../src/components/WhatsAppButton';
 import CartDrawer from '../src/components/CartDrawer';
 
+// ── URL helpers ──────────────────────────────────────────────────────────────
+const slugify = (text) =>
+  String(text)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
+const updateURL = (collectionSlug, productId) => {
+  const params = new URLSearchParams();
+  if (collectionSlug) params.set('collection', collectionSlug);
+  if (productId)      params.set('product', String(productId));
+  const query = params.toString();
+  window.history.pushState({}, '', query ? `?${query}` : window.location.pathname);
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 const Home = () => {
   const [selectedCollection, setSelectedCollection] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  
+
   // Modal states
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isSampleFormOpen, setIsSampleFormOpen] = useState(false);
@@ -31,6 +48,81 @@ const Home = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [lightboxImg, setLightboxImg] = useState(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Track whether the URL was set by us (to avoid double-updates)
+  const isUrlNav = useRef(false);
+
+  // ── Sync URL when collection / product changes ───────────────────────────
+  useEffect(() => {
+    if (isUrlNav.current) { isUrlNav.current = false; return; }
+    const slug = selectedCollection ? slugify(selectedCollection.name) : null;
+    updateURL(slug, selectedProduct ? selectedProduct.id : null);
+  }, [selectedCollection, selectedProduct]);
+
+  // ── On mount: read URL params and auto-navigate ──────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const collectionSlug = params.get('collection');
+    const productId = params.get('product');
+
+    if (!collectionSlug) return; // Nothing to do
+
+    const loadFromUrl = async () => {
+      try {
+        const collections = await fetchCollectionsCached();
+        const match = collections.find(c => slugify(c.name) === collectionSlug);
+        if (!match) return;
+
+        // Map raw DB row → collectionData shape
+        const data = {};
+        for (let key in match) {
+          data[key.toLowerCase().replace(/[\s_]+/g, '')] = match[key];
+        }
+        const collectionData = {
+          id: match.id,
+          name: data.name || data.title || 'Unnamed',
+          desc: data.description || data.desc || '',
+          img: data.img || data.imageurl || data.imgurl || data.image || '',
+          parentId: data.parentid || '',
+          type: data.type || 'collection',
+          order: data.order !== undefined ? Number(data.order) : 0,
+        };
+
+        isUrlNav.current = true;
+        setSelectedCollection(collectionData);
+
+        // If a product ID was also in the URL, open it
+        if (productId) {
+          const products = await fetchProductsCached(match.id);
+          const prodRaw = products?.find(p => String(p.id) === String(productId));
+          if (prodRaw) {
+            const pd = {};
+            for (let key in prodRaw) pd[key.toLowerCase().replace(/[\s_]+/g, '')] = prodRaw[key];
+            const prod = {
+              id: prodRaw.id,
+              name: pd.name || pd.title || 'Unnamed',
+              desc: pd.description || pd.desc || pd.detail || '',
+              img: pd.imageurl || pd.imgurl || pd.image || pd.img || pd.pic || '',
+              sizesImg: pd.sizesimageurl || pd.sizeimage || pd.sizesimage || pd.sizepic || '',
+              sizes: pd.sizes || pd.size || pd.availablesizes || pd.available_sizes || '',
+              refcode: pd.refcode || pd.referencecode || pd.code || pd.refercode || '',
+              price: pd.price || pd.cost || '',
+              discount_price: prodRaw.discount_price || null,
+              stock: prodRaw.stock !== undefined ? prodRaw.stock : null,
+              show_sizes: prodRaw.show_sizes !== undefined ? prodRaw.show_sizes : true,
+              collection: collectionData.name,
+            };
+            // Small delay so ProductsView renders first
+            setTimeout(() => setSelectedProduct(prod), 400);
+          }
+        }
+      } catch (e) {
+        console.warn('Deep-link navigation failed:', e);
+      }
+    };
+
+    loadFromUrl();
+  }, []); // Run only once on mount
 
   const handleOpenProduct = async (prod) => {
     let fullProd = prod;
@@ -69,7 +161,6 @@ const Home = () => {
            }
        }
     }
-    // Preserve stock and show_sizes if already present on the prod object
     if (fullProd.stock === undefined && prod.stock !== undefined) fullProd.stock = prod.stock;
     if (fullProd.show_sizes === undefined && prod.show_sizes !== undefined) fullProd.show_sizes = prod.show_sizes;
     if (!fullProd.collection && prod.collection) fullProd.collection = prod.collection;
@@ -87,9 +178,34 @@ const Home = () => {
     } catch(e) {}
   };
 
+  // When product modal closes, remove ?product from URL but keep ?collection
+  const handleCloseProduct = () => {
+    setSelectedProduct(null);
+    if (selectedCollection) {
+      updateURL(slugify(selectedCollection.name), null);
+    }
+  };
+
+  // When going back to collections, clear URL entirely
+  const handleBack = () => {
+    setSelectedCollection(null);
+    window.history.pushState({}, '', window.location.pathname);
+  };
+
   useEffect(() => {
     // Start prefetching data immediately on mount
     prefetchData();
+
+    // Handle #hash anchor on initial load — scroll to section after page renders
+    const hash = window.location.hash;
+    if (hash) {
+      setTimeout(() => {
+        const target = document.querySelector(hash);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 300);
+    }
 
     // Sticky Nav & Scroll handling
     const navbar = document.getElementById('navbar');
@@ -147,7 +263,7 @@ const Home = () => {
         <div style={{ display: selectedCollection ? 'block' : 'none' }}>
           <ProductsView 
             collectionData={selectedCollection} 
-            onBack={() => setSelectedCollection(null)} 
+            onBack={handleBack}
             onOpenProduct={handleOpenProduct}
             onOpenLightbox={(img) => setLightboxImg(img)}
           />
@@ -189,7 +305,7 @@ const Home = () => {
         {selectedProduct && (
           <ProductModal 
             product={selectedProduct} 
-            onClose={() => setSelectedProduct(null)} 
+            onClose={handleCloseProduct}
             onOpenLightbox={(img) => setLightboxImg(img)}
             onOpenSampleForm={() => {
               setSampleProduct(selectedProduct);
@@ -210,3 +326,4 @@ const Home = () => {
 };
 
 export default Home;
+
