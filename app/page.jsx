@@ -51,9 +51,12 @@ const Home = () => {
 
   // Track whether the URL was set by us (to avoid double-updates)
   const isUrlNav = useRef(false);
+  // Skip the very first run so we don't wipe the URL before the deep-link loader reads it
+  const isMounted = useRef(false);
 
   // ── Sync URL when collection / product changes ───────────────────────────
   useEffect(() => {
+    if (!isMounted.current) { isMounted.current = true; return; } // skip first mount run
     if (isUrlNav.current) { isUrlNav.current = false; return; }
     const slug = selectedCollection ? slugify(selectedCollection.name) : null;
     updateURL(slug, selectedProduct ? selectedProduct.id : null);
