@@ -2,7 +2,7 @@
 import React from 'react';
 import { useCart } from './CartContext';
 
-const Navbar = ({ onToggleDrawer, onOpenSearch }) => {
+const Navbar = ({ onToggleDrawer, onOpenSearch, onGoHome, onGoCollections }) => {
   const { cartCount, setIsCartOpen } = useCart();
 
   return (
@@ -44,8 +44,8 @@ const Navbar = ({ onToggleDrawer, onOpenSearch }) => {
         </div>
         <nav>
           <ul className="nav-links pc-only-flex">
-            <li><a href="#" id="nav-home-btn">Home</a></li>
-            <li><a href="#collections">Collections</a></li>
+            <li><a href="#" id="nav-home-btn" onClick={(e) => { e.preventDefault(); onGoHome?.(); }}>Home</a></li>
+            <li><a href="#collections" id="nav-collections-btn" onClick={(e) => { e.preventDefault(); onGoCollections?.(); }}>Collections</a></li>
             <li><a href="#faq">FAQ</a></li>
             <li><a href="#contact">Contact</a></li>
           </ul>

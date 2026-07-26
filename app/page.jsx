@@ -195,6 +195,16 @@ const Home = () => {
     window.history.pushState({}, '', window.location.pathname);
   };
 
+  // Navbar "Collections" click — go back and scroll to the section
+  const handleGoCollections = () => {
+    setSelectedCollection(null);
+    window.history.pushState({}, '', window.location.pathname);
+    setTimeout(() => {
+      const el = document.getElementById('collections');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
   useEffect(() => {
     // Start prefetching data immediately on mount
     prefetchData();
@@ -249,6 +259,8 @@ const Home = () => {
           onOrderSamples={() => setIsOrderModalOpen(true)} 
           onToggleDrawer={() => setIsDrawerOpen(true)}
           onOpenSearch={() => setIsSearchOpen(true)}
+          onGoHome={handleBack}
+          onGoCollections={handleGoCollections}
         />
         
         <MenuDrawer 

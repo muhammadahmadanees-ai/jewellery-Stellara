@@ -1264,10 +1264,13 @@ STELLARA`;
         });
 
         if (matchedProduct) {
-          // Use discounted price if available on catalog product
-          const effectiveSellingPrice = (matchedProduct.discount_price !== null && matchedProduct.discount_price !== undefined && Number(matchedProduct.discount_price) > 0)
-            ? Number(matchedProduct.discount_price)
-            : (item.price > 0 ? item.price : Number(matchedProduct.price || 0));
+          // ALWAYS use the price recorded on the bill first (item.price).
+          // Only fall back to the catalog price if no bill price was captured.
+          const effectiveSellingPrice = item.price > 0
+            ? item.price
+            : (matchedProduct.discount_price !== null && matchedProduct.discount_price !== undefined && Number(matchedProduct.discount_price) > 0
+                ? Number(matchedProduct.discount_price)
+                : Number(matchedProduct.price || 0));
 
           itemsSubtotal += effectiveSellingPrice * itemQty;
 
@@ -2431,7 +2434,7 @@ STELLARA`;
                         <td><strong>{order.name}</strong></td>
                         <td>{order.email}<br/>{order.phone}</td>
                         <td>{order.type}</td>
-                        <td style={{ fontSize: '0.85rem' }}>
+                        <td style={{ fontSize: '0.85rem', verticalAlign: 'top' }}>
                           {rev > 0 ? (
                             <div>
                               <div>Rev: <strong>Rs. {rev.toLocaleString()}</strong></div>
@@ -2444,7 +2447,7 @@ STELLARA`;
                             <span style={{ color: '#999', fontStyle: 'italic' }}>No snapshot price</span>
                           )}
                         </td>
-                        <td style={{ fontSize: '0.85rem', maxWidth: '350px', wordBreak: 'break-word' }}>
+                        <td style={{ fontSize: '0.85rem', maxWidth: '350px', wordBreak: 'break-word', verticalAlign: 'top' }}>
                           <span style={{ whiteSpace: 'pre-wrap' }}>{detailsStr}</span>
                           {hasMore && (
                             <button 
