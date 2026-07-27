@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { supabase, fetchProductsCached, getProductsCache } from '../supabase';
+import { supabase, fetchProductsCached, getProductsCache, fetchCollectionsCached } from '../supabase';
 import { useCart } from './CartContext';
 import { parseProductImages, getColorHex, isLightColor } from './imageHelper';
 
@@ -24,11 +24,12 @@ const ShrinkText = ({ text }) => {
   );
 };
 
-const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox }) => {
+const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox, onSelectCollection }) => {
   const { addToCart } = useCart();
   const [addedIds, setAddedIds] = useState({});
   const [hoveredImages, setHoveredImages] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [otherCollections, setOtherCollections] = useState([]);
 
   const processProducts = (rawProducts) => {
     const prods = [];
@@ -88,6 +89,19 @@ const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox })
     };
 
     fetchProducts();
+  }, [collectionData]);
+
+  // Fetch other collections to show at bottom
+  useEffect(() => {
+    fetchCollectionsCached().then(all => {
+      if (!all || !collectionData) return;
+      const others = all.filter(c =>
+        c.id !== collectionData.id &&
+        (c.type === 'collection' || !c.type) &&
+        (c.img || c.image || c.imageurl)
+      );
+      setOtherCollections(others);
+    }).catch(() => {});
   }, [collectionData]);
 
   const handleQuickAddToCart = (e, prod) => {
@@ -408,6 +422,116 @@ const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox })
           </div>
         )}
       </div>
+
+      {/* ── Other Collections ────────────────────────────────────────────── */}
+      {otherCollections.length > 0 && onSelectCollection && (
+        <div style={{
+          borderTop: '1px solid #e8e0d5',
+          marginTop: '4rem',
+          paddingTop: '3rem',
+          paddingBottom: '3rem',
+          background: 'linear-gradient(to bottom, #fff 0%, #faf8f5 100%)',
+        }}>
+          <div className="container">
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <p style={{ color: '#8B1A1A', fontSize: '0.8rem', letterSpacing: '3px', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.5rem' }}>
+                Discover More
+              </p>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: '700', margin: 0, color: 'var(--text-color)' }}>
+                Explore Other Collections
+              </h3>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+              gap: '1.2rem',
+            }}>
+              {otherCollections.map(col => {
+                const imgUrl = col.img || col.image || col.imageurl || '';
+                return (
+                  <div
+                    key={col.id}
+                    onClick={() => onSelectCollection({
+                      id: col.id,
+                      name: col.name || col.title || 'Unnamed',
+                      desc: col.description || col.desc || '',
+                      img: imgUrl,
+                      parentId: col.parent_id || '',
+                      type: col.type || 'collection',
+                      order: col.order || 0,
+                    })}
+                    style={{
+                      cursor: 'pointer',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      background: '#fff',
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
+                      transition: 'transform 0.22s ease, box-shadow 0.22s ease',
+                      border: '1px solid #f0ebe3',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.boxShadow = '0 8px 28px rgba(139,26,26,0.15)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)';
+                    }}
+                  >
+                    {/* Image */}
+                    <div style={{
+                      width: '100%',
+                      aspectRatio: '1 / 1',
+                      overflow: 'hidden',
+                      background: '#f9f6f2',
+                    }}>
+                      {imgUrl ? (
+                        <img
+                          src={imgUrl}
+                          alt={col.name}
+                          loading="lazy"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            transition: 'transform 0.35s ease',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.06)'}
+                          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                        />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}>
+                          <i className="fas fa-gem" style={{ fontSize: '2rem' }}></i>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Name */}
+                    <div style={{ padding: '0.75rem 1rem 0.9rem' }}>
+                      <p style={{
+                        margin: 0,
+                        fontWeight: '600',
+                        fontSize: '0.88rem',
+                        color: 'var(--text-color)',
+                        lineHeight: '1.3',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}>
+                        {col.name || col.title}
+                      </p>
+                      <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#8B1A1A', fontWeight: '500' }}>
+                        View Collection →
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };

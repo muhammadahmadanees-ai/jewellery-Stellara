@@ -281,6 +281,7 @@ const Home = () => {
             onBack={handleBack}
             onOpenProduct={handleOpenProduct}
             onOpenLightbox={(img) => setLightboxImg(img)}
+            onSelectCollection={setSelectedCollection}
           />
         </div>
         
