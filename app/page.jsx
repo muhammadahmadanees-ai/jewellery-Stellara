@@ -47,6 +47,7 @@ const Home = () => {
   const [sampleProduct, setSampleProduct] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [lightboxImg, setLightboxImg] = useState(null);
+  const [lightboxImages, setLightboxImages] = useState([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Track whether the URL was set by us (to avoid double-updates)
@@ -280,7 +281,7 @@ const Home = () => {
             collectionData={selectedCollection} 
             onBack={handleBack}
             onOpenProduct={handleOpenProduct}
-            onOpenLightbox={(img) => setLightboxImg(img)}
+            onOpenLightbox={(img, imgs) => { setLightboxImg(img); setLightboxImages(imgs || []); }}
             onSelectCollection={setSelectedCollection}
           />
         </div>
@@ -322,7 +323,7 @@ const Home = () => {
           <ProductModal 
             product={selectedProduct} 
             onClose={handleCloseProduct}
-            onOpenLightbox={(img) => setLightboxImg(img)}
+            onOpenLightbox={(img, imgs) => { setLightboxImg(img); setLightboxImages(imgs || []); }}
             onOpenSampleForm={() => {
               setSampleProduct(selectedProduct);
               setSelectedProduct(null);
@@ -332,7 +333,11 @@ const Home = () => {
         )}
 
         {lightboxImg && (
-          <Lightbox img={lightboxImg} onClose={() => setLightboxImg(null)} />
+          <Lightbox
+            img={lightboxImg}
+            images={lightboxImages}
+            onClose={() => { setLightboxImg(null); setLightboxImages([]); }}
+          />
         )}
         <ScrollToTop />
         <WhatsAppButton />

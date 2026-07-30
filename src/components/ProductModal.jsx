@@ -119,12 +119,96 @@ const ProductModal = ({ product, onClose, onOpenLightbox, onOpenSampleForm }) =>
         
         {/* Left Column — Image Panel */}
         <div className="pm-left">
-          <div className="pm-image-box">
+          <div className="pm-image-box" style={{ position: 'relative', overflow: 'hidden' }}>
             <img 
               src={currentImage} 
               alt={product.name} 
-              onClick={() => { if(currentImage) onOpenLightbox(currentImage); }}
+              onClick={() => { if(currentImage) onOpenLightbox(currentImage, parsedImg.images || []); }}
             />
+
+            {/* Prev / Next arrows — only when multiple images exist */}
+            {parsedImg.images && parsedImg.images.length > 1 && (() => {
+              const allImgs = parsedImg.images;
+              const idx = allImgs.indexOf(currentImage);
+              const currentIdx = idx >= 0 ? idx : 0;
+              const goPrev = (e) => { e.stopPropagation(); setActiveImage(allImgs[(currentIdx - 1 + allImgs.length) % allImgs.length]); };
+              const goNext = (e) => { e.stopPropagation(); setActiveImage(allImgs[(currentIdx + 1) % allImgs.length]); };
+
+              return (
+                <>
+                  {/* ← Prev */}
+                  <button
+                    onClick={goPrev}
+                    aria-label="Previous image"
+                    style={{
+                      position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
+                      background: 'rgba(0,0,0,0.45)', color: '#fff', border: 'none',
+                      borderRadius: '50%', width: '36px', height: '36px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1.3rem', cursor: 'pointer', zIndex: 10,
+                      backdropFilter: 'blur(4px)',
+                      transition: 'background 0.18s, transform 0.18s',
+                      lineHeight: 1,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(139,26,26,0.85)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; }}
+                  >‹</button>
+
+                  {/* → Next */}
+                  <button
+                    onClick={goNext}
+                    aria-label="Next image"
+                    style={{
+                      position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                      background: 'rgba(0,0,0,0.45)', color: '#fff', border: 'none',
+                      borderRadius: '50%', width: '36px', height: '36px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1.3rem', cursor: 'pointer', zIndex: 10,
+                      backdropFilter: 'blur(4px)',
+                      transition: 'background 0.18s, transform 0.18s',
+                      lineHeight: 1,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(139,26,26,0.85)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1)'; }}
+                  >›</button>
+
+                  {/* Image counter badge */}
+                  <div style={{
+                    position: 'absolute', bottom: '10px', right: '10px',
+                    background: 'rgba(0,0,0,0.5)', color: '#fff',
+                    fontSize: '0.72rem', fontWeight: '600',
+                    padding: '3px 9px', borderRadius: '20px',
+                    backdropFilter: 'blur(4px)', zIndex: 10,
+                    letterSpacing: '0.5px',
+                  }}>
+                    {currentIdx + 1} / {allImgs.length}
+                  </div>
+
+                  {/* Dot indicators */}
+                  <div style={{
+                    position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)',
+                    display: 'flex', gap: '6px', zIndex: 10,
+                  }}>
+                    {allImgs.map((_, i) => (
+                      <span
+                        key={i}
+                        onClick={(e) => { e.stopPropagation(); setActiveImage(allImgs[i]); }}
+                        style={{
+                          width: i === currentIdx ? '18px' : '7px',
+                          height: '7px',
+                          borderRadius: '4px',
+                          background: i === currentIdx ? '#8B1A1A' : 'rgba(255,255,255,0.7)',
+                          cursor: 'pointer',
+                          transition: 'all 0.25s ease',
+                          display: 'inline-block',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                        }}
+                      />
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           {/* Thumbnail Strip */}
