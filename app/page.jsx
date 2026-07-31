@@ -196,6 +196,14 @@ const Home = () => {
     window.history.pushState({}, '', window.location.pathname);
   };
 
+  // Navigate to a specific collection — sets state AND URL immediately
+  const handleSelectCollection = (col) => {
+    setSelectedCollection(col);
+    if (col) {
+      updateURL(slugify(col.name), null);
+    }
+  };
+
   // Navbar "Collections" click — go back and scroll to the section
   const handleGoCollections = () => {
     setSelectedCollection(null);
@@ -267,13 +275,13 @@ const Home = () => {
         <MenuDrawer 
           isOpen={isDrawerOpen}
           onClose={() => setIsDrawerOpen(false)}
-          onSelectCollection={setSelectedCollection}
+          onSelectCollection={handleSelectCollection}
           onOpenProduct={handleOpenProduct}
         />
         
         <div style={{ display: !selectedCollection ? 'block' : 'none' }}>
           <Hero />
-          <Collections onSelectCollection={setSelectedCollection} onOpenProduct={handleOpenProduct} />
+          <Collections onSelectCollection={handleSelectCollection} onOpenProduct={handleOpenProduct} />
         </div>
         
         <div style={{ display: selectedCollection ? 'block' : 'none' }}>
@@ -282,7 +290,7 @@ const Home = () => {
             onBack={handleBack}
             onOpenProduct={handleOpenProduct}
             onOpenLightbox={(img, imgs) => { setLightboxImg(img); setLightboxImages(imgs || []); }}
-            onSelectCollection={setSelectedCollection}
+            onSelectCollection={handleSelectCollection}
           />
         </div>
         
