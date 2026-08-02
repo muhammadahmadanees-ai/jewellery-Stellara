@@ -1194,14 +1194,17 @@ STELLARA`;
         if (qtyMatch) {
           const name = qtyMatch[1].trim();
           const qty = parseInt(qtyMatch[2]) || 1;
-          const rawPrice = qtyMatch[3] || qtyMatch[4];
-          const price = rawPrice ? Number(rawPrice.replace(/,/g, '')) : 0;
+          const rawPrice = qtyMatch[3] ?? qtyMatch[4]; // undefined if not captured at all
+          // Use null to mean "no price in bill" vs 0 which means "explicitly free"
+          const price = rawPrice !== undefined && rawPrice !== null
+            ? Number(rawPrice.replace(/,/g, ''))
+            : null;
 
           parsedFromMsg.push({
             name,
             qty,
-            price: price > 0 ? (price / qty) : (Number(order.selling_price) || 0),
-            lineTotal: price > 0 ? price : (Number(order.selling_price) || 0)
+            price: price !== null ? (price / qty) : (Number(order.selling_price) || 0),
+            lineTotal: price !== null ? price : (Number(order.selling_price) || 0)
           });
         }
       }
@@ -1265,9 +1268,10 @@ STELLARA`;
 
         if (matchedProduct) {
           // ALWAYS use the price recorded on the bill first (item.price).
-          // Only fall back to the catalog price if no bill price was captured.
-          const effectiveSellingPrice = item.price > 0
-            ? item.price
+          // item.price === 0 means explicitly free; only fall back when null/undefined.
+          const billPrice = item.price;
+          const effectiveSellingPrice = (billPrice !== null && billPrice !== undefined)
+            ? billPrice
             : (matchedProduct.discount_price !== null && matchedProduct.discount_price !== undefined && Number(matchedProduct.discount_price) > 0
                 ? Number(matchedProduct.discount_price)
                 : Number(matchedProduct.price || 0));

@@ -219,14 +219,21 @@ const Home = () => {
     prefetchData();
 
     // Handle #hash anchor on initial load — scroll to section after page renders
-    const hash = window.location.hash;
-    if (hash) {
-      setTimeout(() => {
-        const target = document.querySelector(hash);
+    const rawHash = window.location.hash; // e.g. "#collection" or "#collections"
+    if (rawHash) {
+      // Normalise: #collection (singular) → #collections, keep others as-is
+      const normalised = rawHash === '#collection' ? '#collections' : rawHash;
+      // Retry scroll with increasing delays so DOM is ready
+      const scrollToHash = () => {
+        const target = document.querySelector(normalised) || document.getElementById(normalised.slice(1));
         if (target) {
           target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return true;
         }
-      }, 300);
+        return false;
+      };
+      // Try at 200ms, 500ms, 1000ms
+      [200, 500, 1000].forEach(delay => setTimeout(scrollToHash, delay));
     }
 
     // Sticky Nav & Scroll handling
