@@ -103,6 +103,7 @@ const Admin = () => {
   const [billItems, setBillItems] = useState([]);
   const [billCustomer, setBillCustomer] = useState({ name: '', phone: '', email: '', address: '' });
   const [billDiscount, setBillDiscount] = useState(0);
+  const [billDeliveryCharge, setBillDeliveryCharge] = useState(0);
   const [billNote, setBillNote] = useState('Thank you for visiting Stellara!');
   const [billSearch, setBillSearch] = useState('');
   const [billSearchFocused, setBillSearchFocused] = useState(false);
@@ -1009,8 +1010,8 @@ STELLARA`;
   }, [billItems]);
 
   const billGrandTotal = useMemo(() => {
-    return Math.max(0, billSubtotal - (Number(billDiscount) || 0));
-  }, [billSubtotal, billDiscount]);
+    return Math.max(0, billSubtotal - (Number(billDiscount) || 0) + (Number(billDeliveryCharge) || 0));
+  }, [billSubtotal, billDiscount, billDeliveryCharge]);
 
   const generateBillNumber = () => {
     const now = new Date();
@@ -1109,6 +1110,12 @@ STELLARA`;
             <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:0.95rem;color:#dc2626;">
               <span>Discount</span>
               <span>- Rs. ${Number(billDiscount).toLocaleString()}</span>
+            </div>
+            ` : ''}
+            ${Number(billDeliveryCharge) > 0 ? `
+            <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:0.95rem;color:#555;">
+              <span>Delivery Charge</span>
+              <span>Rs. ${Number(billDeliveryCharge).toLocaleString()}</span>
             </div>
             ` : ''}
             <div style="display:flex;justify-content:space-between;padding:12px 0;font-size:1.2rem;font-weight:700;border-top:2px solid #8B1A1A;margin-top:8px;color:#8B1A1A;">
@@ -1347,20 +1354,24 @@ STELLARA`;
     const subtotal = itemsSubtotal;
     const discountedSubtotal = Math.max(0, subtotal - additionalDiscount);
 
-    let shippingCharge = 200;
+    let defaultShipping = 200;
     if (order.message) {
       if (order.message.includes('Shipping Charge: Free') || 
           order.message.toLowerCase().includes('shipping charge: 0') || 
           order.message.toLowerCase().includes('free shipping')) {
-        shippingCharge = 0;
+        defaultShipping = 0;
       } else {
         const match = order.message.match(/Shipping Charge:\s*Rs\.\s*(\d+)/i) || 
                       order.message.match(/Shipping Charge:\s*(\d+)/i);
         if (match) {
-          shippingCharge = Number(match[1]);
+          defaultShipping = Number(match[1]);
         }
       }
     }
+
+    const deliveryInput = window.prompt("Enter delivery charge amount in Rs. (Enter 0 or leave blank to exclude delivery charges):", String(defaultShipping));
+    if (deliveryInput === null) return;
+    const shippingCharge = (deliveryInput.trim() === '' || isNaN(Number(deliveryInput))) ? 0 : Math.max(0, Number(deliveryInput));
     const totalAmount = discountedSubtotal + shippingCharge;
 
     const itemsListHtml = parsedItems.map((item) => {
@@ -1560,7 +1571,7 @@ STELLARA`;
               ` : ''}
               <div class="price-row">
                 <span>Delivery Charge</span>
-                <span>${shippingCharge > 0 ? `Rs. ${shippingCharge.toLocaleString()}` : 'Free'}</span>
+                <span>${shippingCharge > 0 ? `Rs. ${shippingCharge.toLocaleString()}` : 'Rs. 0'}</span>
               </div>
               <div class="price-row total">
                 <span>Total Amount</span>
@@ -1569,7 +1580,10 @@ STELLARA`;
             </div>
             
             <div class="formula-box">
-              Rs. ${discountedSubtotal.toLocaleString()} (Total) + Rs. ${shippingCharge.toLocaleString()} (Delivery Charge) = Rs. ${totalAmount.toLocaleString()} (Total Amount)
+              ${shippingCharge > 0 
+                ? `Rs. ${discountedSubtotal.toLocaleString()} (Total) + Rs. ${shippingCharge.toLocaleString()} (Delivery Charge) = Rs. ${totalAmount.toLocaleString()} (Total Amount)`
+                : `Rs. ${discountedSubtotal.toLocaleString()} (Total Amount)`
+              }
             </div>
           </div>
         </div>
@@ -1584,13 +1598,13 @@ STELLARA`;
     if (billItems.length === 0) return alert('Add at least one product to the bill.');
     if (!billCustomer.name.trim()) return alert('Please enter the customer name.');
 
-    const deliveryInput = window.prompt("Enter delivery charge (default: 200):", "200");
+    const deliveryInput = window.prompt("Enter delivery charge amount in Rs. (Enter 0 or leave blank to exclude delivery charges):", String(billDeliveryCharge || 200));
     if (deliveryInput === null) return;
-    const shippingCharge = Number(deliveryInput) || 0;
+    const shippingCharge = (deliveryInput.trim() === '' || isNaN(Number(deliveryInput))) ? 0 : Math.max(0, Number(deliveryInput));
 
     const subtotal = billSubtotal;
     const discount = Number(billDiscount) || 0;
-    const discountedSubtotal = billGrandTotal;
+    const discountedSubtotal = Math.max(0, subtotal - discount);
     const totalAmount = discountedSubtotal + shippingCharge;
 
     const itemsListHtml = billItems.map((item, idx) => {
@@ -1801,7 +1815,7 @@ STELLARA`;
               ` : ''}
               <div class="price-row">
                 <span>Delivery Charge</span>
-                <span>${shippingCharge > 0 ? `Rs. ${shippingCharge.toLocaleString()}` : 'Free'}</span>
+                <span>${shippingCharge > 0 ? `Rs. ${shippingCharge.toLocaleString()}` : 'Rs. 0'}</span>
               </div>
               <div class="price-row total">
                 <span>Total Amount</span>
@@ -1810,7 +1824,10 @@ STELLARA`;
             </div>
             
             <div class="formula-box">
-              Rs. ${discountedSubtotal.toLocaleString()} (Total) + Rs. ${shippingCharge.toLocaleString()} (Delivery Charge) = Rs. ${totalAmount.toLocaleString()} (Total Amount)
+              ${shippingCharge > 0 
+                ? `Rs. ${discountedSubtotal.toLocaleString()} (Total) + Rs. ${shippingCharge.toLocaleString()} (Delivery Charge) = Rs. ${totalAmount.toLocaleString()} (Total Amount)`
+                : `Rs. ${discountedSubtotal.toLocaleString()} (Total Amount)`
+              }
             </div>
           </div>
         </div>
@@ -1858,7 +1875,7 @@ STELLARA`;
         base_price: totalBaseCost,
         status: 'closed',
         address: billCustomer.address?.trim() || null,
-        message: `Walk-in Bill: ${billNo}\nItems:\n${itemsSummaryList.map(i => `• ${i}`).join('\n')}${billDiscount > 0 ? `\n\nAdditional Bill Discount: Rs. ${Number(billDiscount).toLocaleString()}` : ''}`
+        message: `Walk-in Bill: ${billNo}\nItems:\n${itemsSummaryList.map(i => `• ${i}`).join('\n')}${billDiscount > 0 ? `\n\nAdditional Bill Discount: Rs. ${Number(billDiscount).toLocaleString()}` : ''}${billDeliveryCharge > 0 ? `\nShipping Charge: Rs. ${Number(billDeliveryCharge)}` : ''}`
       };
 
       const { error } = await supabase.from('orders').insert([orderData]);
@@ -3061,6 +3078,21 @@ STELLARA`;
                         min="0"
                         value={billDiscount}
                         onChange={e => setBillDiscount(e.target.value)}
+                        style={{ width: '90px', textAlign: 'right', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.9rem' }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', fontSize: '0.95rem' }}>
+                    <label style={{ color: '#555' }}>Delivery Charge</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ color: '#888', fontSize: '0.9rem' }}>Rs.</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={billDeliveryCharge}
+                        onChange={e => setBillDeliveryCharge(e.target.value)}
+                        placeholder="0"
                         style={{ width: '90px', textAlign: 'right', padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.9rem' }}
                       />
                     </div>
