@@ -146,6 +146,7 @@ const Admin = () => {
   // --- Custom Modals/Alerts States ---
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: '', type: '', name: '' });
   const [adminAlert, setAdminAlert] = useState({ open: false, title: '', message: '' });
+  const [financialModal, setFinancialModal] = useState({ isOpen: false, type: 'revenue', search: '' });
 
   // --- Reply Modal States ---
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
@@ -1295,7 +1296,11 @@ STELLARA`;
       }
     }
 
-    const rev = itemsSubtotal > 0 ? Math.max(0, itemsSubtotal - additionalDiscount) : (Number(order.selling_price || 0) * qty);
+    // If items were successfully parsed from the bill, use itemsSubtotal (even if 0 = free item).
+    // Only fall back to selling_price when NO items could be extracted from the message at all.
+    const rev = (parsedItems && parsedItems.length > 0)
+      ? Math.max(0, itemsSubtotal - additionalDiscount)
+      : (Number(order.selling_price || 0) * qty);
 
     let cost = totalCostFromItems;
     if (cost === 0) {
@@ -1984,6 +1989,7 @@ STELLARA`;
     let totalRevenue = 0;
     let totalCost = 0;
     let totalProfit = 0;
+    const financialBreakdownList = [];
 
     let recentOrderStr = "None yet.";
 
@@ -2033,12 +2039,30 @@ STELLARA`;
       if (statusCounts[s] !== undefined) statusCounts[s]++;
 
       const repOrder = items.length > 1 ? { ...primary, groupedOrders: items } : primary;
-      const { rev, cost, profit } = calculateOrderFinancials(repOrder, ordersList, allProductsList);
+      const { rev, cost, profit, parsedItems } = calculateOrderFinancials(repOrder, ordersList, allProductsList);
 
       totalRevenue += rev;
       totalCost += cost;
       totalProfit += profit;
+
+      financialBreakdownList.push({
+        groupKey: k,
+        primaryOrder: primary,
+        groupedCount: items.length,
+        customerName: primary.name || 'Walk-in Customer / Unknown',
+        emailPhone: primary.email || primary.phone || primary.whatsapp || 'N/A',
+        type: primary.type || 'Order',
+        date: primary.created_at ? new Date(primary.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A',
+        rawDate: primary.created_at ? new Date(primary.created_at) : new Date(0),
+        rev,
+        cost,
+        profit,
+        parsedItems: parsedItems || [],
+        tile: primary.tile || 'Product'
+      });
     });
+
+    financialBreakdownList.sort((a, b) => b.rawDate - a.rawDate);
 
     let weekDelta = lastWeekCount === 0 ? 100 : Math.round(((weekCount - lastWeekCount) / lastWeekCount) * 100);
     let monthDelta = lastMonthCount === 0 ? 100 : Math.round(((monthCount - lastMonthCount) / lastMonthCount) * 100);
@@ -2057,7 +2081,8 @@ STELLARA`;
       statusCounts, recentOrderStr,
       weeksData, labels,
       sampleRequests, generalInquiries,
-      totalRevenue, totalCost, totalProfit, profitMargin
+      totalRevenue, totalCost, totalProfit, profitMargin,
+      financialBreakdownList
     };
   }, [ordersList, allProductsList]);
 
@@ -2164,18 +2189,67 @@ STELLARA`;
                     {dashboardStats.lastMonthCount === 0 ? '+100% vs last month' : `${dashboardStats.monthDelta > 0 ? '+' : ''}${dashboardStats.monthDelta}% vs last month`}
                   </span>
               </div>
-              <div className="stat-card" style={{ background: 'linear-gradient(135deg, #fef7e0 0%, #fff 100%)' }}>
-                  <h5>TOTAL REVENUE</h5>
+              <div 
+                className="stat-card" 
+                onClick={() => setFinancialModal({ isOpen: true, type: 'revenue', search: '' })}
+                style={{ 
+                  background: 'linear-gradient(135deg, #fef7e0 0%, #fff 100%)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  border: '1px solid #fef3c7',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                }}
+                title="Click to see breakdown of revenue by order"
+              >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h5>TOTAL REVENUE</h5>
+                    <span style={{ fontSize: '0.7rem', color: '#b45309', background: '#fef3c7', padding: '2px 6px', borderRadius: '8px', fontWeight: 'bold' }}>
+                      🔍 View Orders
+                    </span>
+                  </div>
                   <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--brand-dark)', marginTop: '8px' }}>Rs. {dashboardStats.totalRevenue.toLocaleString()}</p>
                   <span style={{ fontSize: '0.8rem', color: '#666' }}>From order snapshots</span>
               </div>
-              <div className="stat-card">
-                  <h5>TOTAL BASE COST</h5>
+
+              <div 
+                className="stat-card" 
+                onClick={() => setFinancialModal({ isOpen: true, type: 'cost', search: '' })}
+                style={{ 
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                }}
+                title="Click to see breakdown of base cost by order"
+              >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h5>TOTAL BASE COST</h5>
+                    <span style={{ fontSize: '0.7rem', color: '#4b5563', background: '#f3f4f6', padding: '2px 6px', borderRadius: '8px', fontWeight: 'bold' }}>
+                      🔍 View Orders
+                    </span>
+                  </div>
                   <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#666', marginTop: '8px' }}>Rs. {dashboardStats.totalCost.toLocaleString()}</p>
                   <span style={{ fontSize: '0.8rem', color: '#888' }}>Inventory buying valuation</span>
               </div>
-              <div className="stat-card" style={{ background: 'linear-gradient(135deg, #e6f4ea 0%, #fff 100%)' }}>
-                  <h5>ESTIMATED NET PROFIT</h5>
+
+              <div 
+                className="stat-card" 
+                onClick={() => setFinancialModal({ isOpen: true, type: 'profit', search: '' })}
+                style={{ 
+                  background: 'linear-gradient(135deg, #e6f4ea 0%, #fff 100%)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  border: '1px solid #d1fae5',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                }}
+                title="Click to see breakdown of net profit by order"
+              >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h5>ESTIMATED NET PROFIT</h5>
+                    <span style={{ fontSize: '0.7rem', color: '#047857', background: '#d1fae5', padding: '2px 6px', borderRadius: '8px', fontWeight: 'bold' }}>
+                      🔍 View Orders
+                    </span>
+                  </div>
                   <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981', marginTop: '8px' }}>Rs. {dashboardStats.totalProfit.toLocaleString()}</p>
                   <span style={{ display: 'inline-block', marginTop: '8px', fontSize: '0.85rem', padding: '4px 10px', borderRadius: '12px', background: '#e6f4ea', color: 'green', fontWeight: 'bold' }}>
                     {dashboardStats.profitMargin.toFixed(1)}% Margin
@@ -3427,6 +3501,296 @@ STELLARA`;
               {adminAlert.message}
             </p>
             <button type="button" className="btn" style={{ width: '100%', background: '#8B1A1A' }} onClick={() => setAdminAlert({ open: false, title: '', message: '' })}>OK</button>
+          </div>
+        </div>
+      )}
+      {/* Financial Breakdown Modal */}
+      {financialModal.isOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setFinancialModal({ ...financialModal, isOpen: false })}
+        >
+          <div 
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '950px',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: '20px 28px',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: financialModal.type === 'revenue' 
+                ? 'linear-gradient(135deg, #fffbeb 0%, #ffffff 100%)' 
+                : financialModal.type === 'cost'
+                ? 'linear-gradient(135deg, #f9fafb 0%, #ffffff 100%)'
+                : 'linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%)'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.35rem', color: 'var(--brand-dark)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {financialModal.type === 'revenue' && '💰 Total Revenue Breakdown'}
+                  {financialModal.type === 'cost' && '📦 Total Base Cost Breakdown'}
+                  {financialModal.type === 'profit' && '📈 Estimated Net Profit Breakdown'}
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#6b7280' }}>
+                  {financialModal.type === 'revenue' && `Overall Total Revenue: Rs. ${dashboardStats.totalRevenue.toLocaleString()} across all order groups`}
+                  {financialModal.type === 'cost' && `Overall Total Cost: Rs. ${dashboardStats.totalCost.toLocaleString()} across inventory base costs`}
+                  {financialModal.type === 'profit' && `Overall Net Profit: Rs. ${dashboardStats.totalProfit.toLocaleString()} (${dashboardStats.profitMargin.toFixed(1)}% margin)`}
+                </p>
+              </div>
+              <button
+                onClick={() => setFinancialModal({ ...financialModal, isOpen: false })}
+                style={{
+                  background: '#f3f4f6',
+                  border: 'none',
+                  fontSize: '1.25rem',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  color: '#4b5563',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
+                }}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Filter Tabs & Search Bar */}
+            <div style={{ padding: '14px 28px', background: '#fafafa', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  onClick={() => setFinancialModal({ ...financialModal, type: 'revenue' })}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: 'none',
+                    fontSize: '0.85rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    background: financialModal.type === 'revenue' ? '#d97706' : '#e5e7eb',
+                    color: financialModal.type === 'revenue' ? '#ffffff' : '#374151'
+                  }}
+                >
+                  💰 Revenue (Rs. {dashboardStats.totalRevenue.toLocaleString()})
+                </button>
+                <button 
+                  onClick={() => setFinancialModal({ ...financialModal, type: 'cost' })}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: 'none',
+                    fontSize: '0.85rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    background: financialModal.type === 'cost' ? '#4b5563' : '#e5e7eb',
+                    color: financialModal.type === 'cost' ? '#ffffff' : '#374151'
+                  }}
+                >
+                  📦 Cost (Rs. {dashboardStats.totalCost.toLocaleString()})
+                </button>
+                <button 
+                  onClick={() => setFinancialModal({ ...financialModal, type: 'profit' })}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: 'none',
+                    fontSize: '0.85rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    background: financialModal.type === 'profit' ? '#059669' : '#e5e7eb',
+                    color: financialModal.type === 'profit' ? '#ffffff' : '#374151'
+                  }}
+                >
+                  📈 Profit (Rs. {dashboardStats.totalProfit.toLocaleString()})
+                </button>
+              </div>
+
+              <div style={{ position: 'relative', width: '260px' }}>
+                <input
+                  type="text"
+                  placeholder="Filter by customer, item, date..."
+                  value={financialModal.search}
+                  onChange={(e) => setFinancialModal({ ...financialModal, search: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '6px 12px 6px 30px',
+                    fontSize: '0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                    outline: 'none'
+                  }}
+                />
+                <i className="fas fa-search" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: '0.85rem' }}></i>
+              </div>
+            </div>
+
+            {/* Table / Breakdown Content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 28px' }}>
+              {(() => {
+                const filtered = (dashboardStats.financialBreakdownList || []).filter(item => {
+                  if (!financialModal.search) return true;
+                  const q = financialModal.search.toLowerCase();
+                  return (
+                    item.customerName.toLowerCase().includes(q) ||
+                    item.emailPhone.toLowerCase().includes(q) ||
+                    item.tile.toLowerCase().includes(q) ||
+                    item.type.toLowerCase().includes(q) ||
+                    item.groupKey.toLowerCase().includes(q) ||
+                    item.parsedItems.some(pi => pi.name.toLowerCase().includes(q))
+                  );
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div style={{ padding: '40px 0', textAlign: 'center', color: '#9ca3af' }}>
+                      <i className="fas fa-receipt" style={{ fontSize: '2.5rem', marginBottom: '10px' }}></i>
+                      <p>No orders match your search criteria.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px', fontSize: '0.9rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left', color: '#4b5563', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <th style={{ padding: '12px 8px' }}>Date & Customer</th>
+                        <th style={{ padding: '12px 8px' }}>Items & Order Details</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'right' }}>Revenue</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'right' }}>Base Cost</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'right' }}>Net Profit</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center' }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((row, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                          <td style={{ padding: '12px 8px', verticalAlign: 'top' }}>
+                            <div style={{ fontWeight: 'bold', color: '#1f2937' }}>{row.customerName}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{row.emailPhone}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '2px' }}>{row.date}</div>
+                          </td>
+                          <td style={{ padding: '12px 8px', verticalAlign: 'top', maxWidth: '300px' }}>
+                            <div style={{ fontSize: '0.82rem', color: '#374151' }}>
+                              {row.parsedItems && row.parsedItems.length > 0 ? (
+                                row.parsedItems.map((pi, pidx) => (
+                                  <div key={pidx} style={{ marginBottom: '2px' }}>
+                                    • <strong>{pi.name}</strong> × {pi.qty} <span style={{ color: '#6b7280' }}>(Rs. {(pi.lineTotal !== undefined ? pi.lineTotal : (pi.price * pi.qty)).toLocaleString()})</span>
+                                  </div>
+                                ))
+                              ) : (
+                                <div>{row.tile}</div>
+                              )}
+                            </div>
+                            <span style={{ fontSize: '0.7rem', color: '#9ca3af', display: 'inline-block', marginTop: '2px' }}>
+                              {row.type} {row.groupedCount > 1 ? `(${row.groupedCount} grouped)` : ''}
+                            </span>
+                          </td>
+                          <td style={{ 
+                            padding: '12px 8px', 
+                            textAlign: 'right', 
+                            verticalAlign: 'top', 
+                            fontWeight: financialModal.type === 'revenue' ? 'bold' : 'normal',
+                            color: row.rev > 0 ? '#1f2937' : '#9ca3af',
+                            background: financialModal.type === 'revenue' ? '#fef3c733' : 'transparent'
+                          }}>
+                            Rs. {row.rev.toLocaleString()}
+                          </td>
+                          <td style={{ 
+                            padding: '12px 8px', 
+                            textAlign: 'right', 
+                            verticalAlign: 'top',
+                            fontWeight: financialModal.type === 'cost' ? 'bold' : 'normal',
+                            color: '#6b7280',
+                            background: financialModal.type === 'cost' ? '#f3f4f655' : 'transparent'
+                          }}>
+                            Rs. {row.cost.toLocaleString()}
+                          </td>
+                          <td style={{ 
+                            padding: '12px 8px', 
+                            textAlign: 'right', 
+                            verticalAlign: 'top',
+                            fontWeight: 'bold',
+                            color: row.profit >= 0 ? '#059669' : '#dc2626',
+                            background: financialModal.type === 'profit' ? '#d1fae533' : 'transparent'
+                          }}>
+                            {row.profit >= 0 ? '+' : ''}Rs. {row.profit.toLocaleString()}
+                          </td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center', verticalAlign: 'top' }}>
+                            <button
+                              onClick={() => {
+                                setFinancialModal({ ...financialModal, isOpen: false });
+                                setActiveTab('orders');
+                                setOrderSearch(row.customerName !== 'Walk-in Customer / Unknown' ? row.customerName : row.groupKey);
+                              }}
+                              style={{
+                                padding: '4px 10px',
+                                fontSize: '0.75rem',
+                                borderRadius: '6px',
+                                border: '1px solid #d1d5db',
+                                background: '#ffffff',
+                                color: '#374151',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              View Order
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: '12px 28px', background: '#f9fafb', borderTop: '1px solid #e5e7eb', textAlign: 'right' }}>
+              <button
+                onClick={() => setFinancialModal({ ...financialModal, isOpen: false })}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'var(--brand-dark)',
+                  color: '#ffffff',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem'
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
