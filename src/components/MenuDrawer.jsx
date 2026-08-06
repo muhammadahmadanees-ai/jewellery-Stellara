@@ -303,6 +303,20 @@ const MenuDrawer = ({ isOpen, onClose, onSelectCollection, onOpenProduct }) => {
                                   <strong style={{ color: '#8B1A1A' }}>
                                     Rs. {Number(prod.discount_price).toLocaleString()}
                                   </strong>
+                                  {Number(prod.price) > Number(prod.discount_price) && (
+                                    <span style={{
+                                      fontSize: '0.7rem',
+                                      background: '#fef2f2',
+                                      color: '#991b1b',
+                                      padding: '1px 5px',
+                                      borderRadius: '4px',
+                                      border: '0.5px solid #fee2e2',
+                                      fontWeight: '600',
+                                      marginLeft: '6px'
+                                    }}>
+                                      {Math.round((1 - Number(prod.discount_price) / Number(prod.price)) * 100)}% OFF
+                                    </span>
+                                  )}
                                 </>
                               ) : (
                                 `Rs. ${Number(prod.price).toLocaleString()}`

@@ -293,7 +293,7 @@ const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox, o
                   )}
 
                   {prod.price && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
                       {prod.discount_price ? (
                         <>
                           <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '0.85rem', fontWeight: 'normal' }}>
@@ -302,6 +302,20 @@ const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox, o
                           <span style={{ fontWeight: '600', color: '#8B1A1A', fontSize: '0.95rem' }}>
                             Rs. {parseFloat(prod.discount_price).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </span>
+                          {parseFloat(prod.price) > parseFloat(prod.discount_price) && (
+                            <span style={{
+                              fontSize: '0.72rem',
+                              background: '#fef2f2',
+                              color: '#991b1b',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              border: '0.5px solid #fee2e2',
+                              fontWeight: '600',
+                              letterSpacing: '0.3px'
+                            }}>
+                              {Math.round((1 - parseFloat(prod.discount_price) / parseFloat(prod.price)) * 100)}% OFF
+                            </span>
+                          )}
                         </>
                       ) : (
                         <span style={{ fontWeight: '600', color: '#8B1A1A', fontSize: '0.95rem' }}>
