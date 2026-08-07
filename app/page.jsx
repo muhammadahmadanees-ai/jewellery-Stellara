@@ -218,22 +218,27 @@ const Home = () => {
     // Start prefetching data immediately on mount
     prefetchData();
 
-    // Handle #hash anchor on initial load — scroll to section after page renders
-    const rawHash = window.location.hash; // e.g. "#collection" or "#collections"
+    const params = new URLSearchParams(window.location.search);
+    const hasCollectionParam = params.get('collection');
+    const hasProductParam = params.get('product');
+
+    const scrollToTarget = (selectorOrId) => {
+      const target = document.querySelector(selectorOrId) || document.getElementById(selectorOrId.replace(/^#/, ''));
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return true;
+      }
+      return false;
+    };
+
+    // Handle #hash anchor on initial load if present, otherwise auto-scroll to #collections
+    const rawHash = window.location.hash;
     if (rawHash) {
-      // Normalise: #collection (singular) → #collections, keep others as-is
       const normalised = rawHash === '#collection' ? '#collections' : rawHash;
-      // Retry scroll with increasing delays so DOM is ready
-      const scrollToHash = () => {
-        const target = document.querySelector(normalised) || document.getElementById(normalised.slice(1));
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          return true;
-        }
-        return false;
-      };
-      // Try at 200ms, 500ms, 1000ms
-      [200, 500, 1000].forEach(delay => setTimeout(scrollToHash, delay));
+      [200, 500, 1000].forEach(delay => setTimeout(() => scrollToTarget(normalised), delay));
+    } else if (!hasCollectionParam && !hasProductParam) {
+      // Automatically focus & scroll to Collections section when visitors land on domain / Instagram bio link
+      [300, 600, 1000].forEach(delay => setTimeout(() => scrollToTarget('#collections'), delay));
     }
 
     // Sticky Nav & Scroll handling
