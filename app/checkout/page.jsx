@@ -11,7 +11,7 @@ const CheckoutPage = () => {
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '', address: '', city: '', notes: ''
   });
-  const [paymentMethod, setPaymentMethod] = useState('cod'); // cod | card
+  const [paymentMethod, setPaymentMethod] = useState('card'); // card (Advance Payment)
   const [status, setStatus] = useState('idle'); // idle | sending | success | error
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState('');
@@ -47,7 +47,7 @@ const CheckoutPage = () => {
     if (cart.length === 0) return;
     setStatus('sending');
 
-    const shippingCharge = paymentMethod === 'cod' ? 200 : 0;
+    const shippingCharge = 100;
     const finalTotal = cartTotal + shippingCharge;
 
     // Generate a confirmation number
@@ -121,7 +121,7 @@ const CheckoutPage = () => {
         quantity: String(item.quantity),
         address: formData.address,
         city: formData.city,
-        message: `Confirmation: ${confirmationNum}\nPayment Method: ${paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : 'SadaPay / Bank Transfer'}\n${receiptUrl ? `Payment Receipt: ${receiptUrl}\n` : ''}Shipping Charge: ${shippingCharge > 0 ? `Rs. ${shippingCharge}` : 'Free'}\nNotes: ${formData.notes || 'None'}`,
+        message: `Confirmation: ${confirmationNum}\nPayment Method: SadaPay / Bank Transfer (Advance Payment)\n${receiptUrl ? `Payment Receipt: ${receiptUrl}\n` : ''}Shipping Charge: Rs. ${shippingCharge}\nNotes: ${formData.notes || 'None'}`,
         type: `Cart Order (${confirmationNum})`,
         status: 'new'
       }));
@@ -153,7 +153,7 @@ const CheckoutPage = () => {
         emailData.append("email", formData.email);
         emailData.append("phone", formData.phone || 'N/A');
         emailData.append("address", `${formData.address}, ${formData.city}`);
-        emailData.append("message", `ORDER ITEMS:\n${itemsSummary}\n\nPAYMENT METHOD: ${paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : 'SadaPay / Bank Transfer'}\n${receiptUrl ? `PAYMENT RECEIPT: ${receiptUrl}\n` : ''}SHIPPING: ${shippingCharge > 0 ? `Rs. ${shippingCharge}` : 'Free'}\nTOTAL: ${formatPrice(finalTotal)}\n\nNOTES: ${formData.notes || 'None'}`);
+        emailData.append("message", `ORDER ITEMS:\n${itemsSummary}\n\nPAYMENT METHOD: SadaPay / Bank Transfer (Advance Payment)\n${receiptUrl ? `PAYMENT RECEIPT: ${receiptUrl}\n` : ''}SHIPPING: Rs. ${shippingCharge}\nTOTAL: ${formatPrice(finalTotal)}\n\nNOTES: ${formData.notes || 'None'}`);
 
         await fetch('https://api.web3forms.com/submit', {
           method: 'POST',
@@ -316,33 +316,16 @@ const CheckoutPage = () => {
                   Payment method
                 </h4>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {orderInfo.paymentMethod === 'cod' ? (
-                    <>
-                      <div style={{
-                        width: '28px', height: '28px', borderRadius: '50%', background: '#dcfce7',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '0.8rem', color: '#16a34a'
-                      }}>
-                        <i className="fas fa-money-bill-wave"></i>
-                      </div>
-                      <span style={{ color: '#555', fontSize: '0.88rem' }}>
-                        Cash on Delivery (COD) · {formatPrice(orderInfo.total)}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{
-                        width: '28px', height: '28px', borderRadius: '50%', background: '#e0f2fe',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '0.8rem', color: '#0284c7'
-                      }}>
-                        <i className="far fa-credit-card"></i>
-                      </div>
-                      <span style={{ color: '#555', fontSize: '0.88rem' }}>
-                        Card Payment · {formatPrice(orderInfo.total)}
-                      </span>
-                    </>
-                  )}
+                  <div style={{
+                    width: '28px', height: '28px', borderRadius: '50%', background: '#e0f2fe',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.8rem', color: '#0284c7'
+                  }}>
+                    <i className="far fa-credit-card"></i>
+                  </div>
+                  <span style={{ color: '#555', fontSize: '0.88rem' }}>
+                    SadaPay / Bank Transfer (Advance Payment) · {formatPrice(orderInfo.total)}
+                  </span>
                 </div>
               </div>
 
@@ -613,49 +596,24 @@ const CheckoutPage = () => {
                 </div>
                  <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#555', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Payment Method *</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                    {/* Card Payment Option */}
+                  <div style={{ marginBottom: '16px' }}>
+                    {/* Advance Payment Option */}
                     <div
-                      onClick={() => setPaymentMethod('card')}
                       style={{
                         padding: '16px',
-                        border: `2px solid ${paymentMethod === 'card' ? '#c5a880' : '#e5e7eb'}`,
+                        border: '2px solid #c5a880',
                         borderRadius: '12px',
-                        cursor: 'pointer',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '4px',
-                        backgroundColor: paymentMethod === 'card' ? 'rgba(197, 168, 128, 0.05)' : '#fff',
-                        transition: 'all 0.2s ease',
+                        backgroundColor: 'rgba(197, 168, 128, 0.05)',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600', fontSize: '0.9rem', color: paymentMethod === 'card' ? '#1a1a1a' : '#555' }}>
-                        <i className="far fa-credit-card" style={{ fontSize: '1.1rem', color: paymentMethod === 'card' ? '#c5a880' : '#888' }}></i>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600', fontSize: '0.9rem', color: '#1a1a1a' }}>
+                        <i className="far fa-credit-card" style={{ fontSize: '1.1rem', color: '#c5a880' }}></i>
                         SadaPay / Bank Transfer
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '500' }}>Free Delivery (Advance)</span>
-                    </div>
-
-                    {/* Cash on Delivery Option */}
-                    <div
-                      onClick={() => setPaymentMethod('cod')}
-                      style={{
-                        padding: '16px',
-                        border: `2px solid ${paymentMethod === 'cod' ? '#c5a880' : '#e5e7eb'}`,
-                        borderRadius: '12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px',
-                        backgroundColor: paymentMethod === 'cod' ? 'rgba(197, 168, 128, 0.05)' : '#fff',
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600', fontSize: '0.9rem', color: paymentMethod === 'cod' ? '#1a1a1a' : '#555' }}>
-                        <i className="fas fa-truck-loading" style={{ fontSize: '1.1rem', color: paymentMethod === 'cod' ? '#c5a880' : '#888' }}></i>
-                        Cash on Delivery
-                      </div>
-                      <span style={{ fontSize: '0.75rem', color: '#666' }}>Delivery: Rs. 200</span>
+                      <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '500' }}>Advance Payment (Delivery Charge: Rs. 100)</span>
                     </div>
                   </div>
 
@@ -671,7 +629,7 @@ const CheckoutPage = () => {
                         Advance Payment via SadaPay
                       </h4>
                       <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: '#555', lineHeight: '1.6' }}>
-                        Please transfer the total amount of <strong>{formatPrice(cartTotal)}</strong> to our SadaPay account below, and upload the screenshot of the receipt:
+                        Please transfer the total amount of <strong>{formatPrice(cartTotal + 100)}</strong> (Items: {formatPrice(cartTotal)} + Delivery: Rs. 100) to our SadaPay account below, and upload the screenshot of the receipt:
                       </p>
                       <div style={{
                         display: 'grid',
@@ -884,11 +842,7 @@ const CheckoutPage = () => {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <span style={{ color: '#666', fontSize: '0.9rem' }}>Shipping</span>
-                  {paymentMethod === 'cod' ? (
-                    <span style={{ fontSize: '0.85rem', color: '#1a1a1a', fontWeight: '600' }}>Rs. 200</span>
-                  ) : (
-                    <span style={{ fontSize: '0.85rem', color: '#16a34a', fontWeight: '600' }}>Free</span>
-                  )}
+                  <span style={{ fontSize: '0.85rem', color: '#1a1a1a', fontWeight: '600' }}>Rs. 100</span>
                 </div>
                 <div style={{
                   display: 'flex', justifyContent: 'space-between', paddingTop: '12px',
@@ -896,7 +850,7 @@ const CheckoutPage = () => {
                 }}>
                   <span style={{ fontWeight: '700', fontSize: '1.1rem', color: '#1a1a1a' }}>Total</span>
                   <span style={{ fontWeight: '700', fontSize: '1.1rem', color: '#8B1A1A' }}>
-                    {formatPrice(cartTotal + (paymentMethod === 'cod' ? 200 : 0))}
+                    {formatPrice(cartTotal + 100)}
                   </span>
                 </div>
               </div>
