@@ -52,7 +52,7 @@ const Hero = () => {
           </div>
         </div>
         <div className="hero-video-wrapper" style={{ height: 'auto', alignSelf: 'stretch', display: 'flex' }}>
-          <img src="https://demctbygmsrlycyaewwy.supabase.co/storage/v1/object/public/images/site/hero.png" alt="Stellara Showcase" style={ { width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' } } />
+          <img src="/hero.png" alt="Stellara Showcase" style={ { width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' } } />
         </div>
       </div>
     </section>

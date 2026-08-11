@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef } from 'react';
-import { supabase } from '../supabase';
+import { supabase, fetchCollectionsCached, fetchProductsCached } from '../supabase';
 import RecentlyViewed from './RecentlyViewed';
 
 const MenuDrawer = ({ isOpen, onClose, onSelectCollection, onOpenProduct }) => {
@@ -22,12 +22,11 @@ const MenuDrawer = ({ isOpen, onClose, onSelectCollection, onOpenProduct }) => {
     const fetchAllData = async () => {
       try {
         setLoading(true);
-        // 1. Fetch Collections
-        const { data: querySnapshot, error } = await supabase.from('collections').select('*').order('order');
-        if (error) throw error;
+        // 1. Fetch Collections (cached)
+        const cachedCols = await fetchCollectionsCached();
         
         const cols = [];
-        querySnapshot.forEach((rawData) => {
+        cachedCols.forEach((rawData) => {
           const data = {};
           for (let key in rawData) {
               const cleanKey = key.toLowerCase().replace(/[\s_]+/g, '');
@@ -60,15 +59,14 @@ const MenuDrawer = ({ isOpen, onClose, onSelectCollection, onOpenProduct }) => {
         });
         setExpandedNodes(initialExpanded);
 
-        // 2. Fetch all products from all collections for search indexing
+        // 2. Fetch all products from all collections for search indexing (cached)
         const productsIndex = [];
         for (const col of cols) {
           if (col.type === 'category') continue; // only leaf collections hold products
           try {
-            const { data: pSnapshot, error: pError } = await supabase.from('client_products').select('*').eq('collection_id', col.id).order('order');
-            if (pError) throw pError;
+            const cachedProducts = await fetchProductsCached(col.id);
             
-            pSnapshot.forEach((rawData) => {
+            cachedProducts.forEach((rawData) => {
               const pData = {};
               for (let key in rawData) {
                   const cleanKey = key.toLowerCase().replace(/[\s_]+/g, '');

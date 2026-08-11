@@ -32,7 +32,7 @@ const Navbar = ({ onToggleDrawer, onOpenSearch, onGoHome, onGoCollections }) => 
           </button>
           <a href="#" className="logo nav-mobile-center" style={ { display: 'flex', alignItems: 'center', gap: '8px' } }>
             <img
-              src="https://demctbygmsrlycyaewwy.supabase.co/storage/v1/object/public/images/site/logo.png"
+              src="/logo.png"
               alt="Stellara Jewellery Logo"
               className="logo-img"
               style={ { height: '40px', width: 'auto', borderRadius: '4px' } }
