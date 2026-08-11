@@ -9,6 +9,7 @@ import Contact from '../src/components/Contact';
 import FAQ from '../src/components/FAQ';
 import Footer from '../src/components/Footer';
 
+
 // Drawer & Modals
 import MenuDrawer from '../src/components/MenuDrawer';
 import ProductModal from '../src/components/ProductModal';
@@ -40,6 +41,7 @@ const updateURL = (collectionSlug, productId) => {
 const Home = () => {
   const [selectedCollection, setSelectedCollection] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
 
   // Modal states
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
@@ -127,6 +129,18 @@ const Home = () => {
 
     loadFromUrl();
   }, []); // Run only once on mount
+
+  useEffect(() => {
+    const loadBestSellers = async () => {
+      try {
+        const data = await fetchBestSellers();
+        setBestSellersList(data || []);
+      } catch (e) {
+        console.warn('Failed to load best sellers:', e);
+      }
+    };
+    loadBestSellers();
+  }, []);
 
   const handleOpenProduct = async (prod) => {
     let fullProd = prod;

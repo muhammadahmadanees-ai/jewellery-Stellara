@@ -1,7 +1,85 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { supabase, fetchCollectionsCached, getCollectionsCache } from '../supabase';
+import { supabase, fetchCollectionsCached, getCollectionsCache, fetchBestSellers } from '../supabase';
 import RecentlyViewed from './RecentlyViewed';
+
+// Inline compact best sellers widget for sidebar
+const SidebarBestSellers = ({ onOpenProduct }) => {
+  const [items, setItems] = React.useState([]);
+
+  React.useEffect(() => {
+    fetchBestSellers()
+      .then(data => { if (data && data.length) setItems(data.slice(0, 3)); })
+      .catch(() => {});
+  }, []);
+
+  if (items.length === 0) return null;
+
+  const getImg = (imgField) => {
+    if (!imgField) return '';
+    if (imgField.trim().startsWith('{')) {
+      try { const p = JSON.parse(imgField); return (p.images && p.images[0]) || ''; } catch (e) {}
+    }
+    return imgField;
+  };
+
+  return (
+    <div className="drawer-section" style={{ marginTop: '18px', paddingTop: '18px', borderTop: '1px solid #eaeaea' }}>
+      <h4 className="sidebar-title drawer-section-title" style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <i className="fas fa-crown" style={{ color: '#d97706', fontSize: '0.75rem' }}></i> Best Sellers
+      </h4>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {items.map((item, idx) => {
+          const img = getImg(item.img);
+          const hasDiscount = item.discount_price && Number(item.discount_price) > 0;
+          const price = hasDiscount ? Number(item.discount_price) : Number(item.price);
+          return (
+            <div
+              key={item.id}
+              onClick={() => onOpenProduct(item)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+                padding: '8px', borderRadius: '8px', transition: 'background 0.2s',
+                border: '1px solid transparent'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#faf8f5'; e.currentTarget.style.borderColor = '#e8dcc8'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+            >
+              {/* Rank badge */}
+              <span style={{
+                minWidth: '18px', height: '18px', borderRadius: '50%',
+                background: idx === 0 ? '#d97706' : idx === 1 ? '#9ca3af' : '#b45309',
+                color: '#fff', fontSize: '0.65rem', fontWeight: '700',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+              }}>{idx + 1}</span>
+              {/* Thumbnail */}
+              {img ? (
+                <img src={img} alt={item.name}
+                  style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0, border: '1px solid #f0ebe3' }} />
+              ) : (
+                <div style={{ width: '42px', height: '42px', background: '#f3f4f6', borderRadius: '6px', flexShrink: 0 }} />
+              )}
+              {/* Name + Price */}
+              <div style={{ overflow: 'hidden' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#1a1a1c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>
+                  {item.name}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#d97706', fontWeight: '600', marginTop: '2px' }}>
+                  Rs. {price.toLocaleString()}
+                  {hasDiscount && (
+                    <span style={{ color: '#aaa', fontWeight: '400', textDecoration: 'line-through', marginLeft: '6px', fontSize: '0.7rem' }}>
+                      Rs. {Number(item.price).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 const Collections = ({ onSelectCollection, onOpenProduct }) => {
   // Construct hierarchy dynamically
@@ -287,6 +365,7 @@ const Collections = ({ onSelectCollection, onOpenProduct }) => {
                 {renderTreeNodes(treeRoots)}
               </div>
               <RecentlyViewed onOpenProduct={onOpenProduct} />
+              <SidebarBestSellers onOpenProduct={onOpenProduct} />
             </aside>
 
             {/* Right Column: Active Category Content */}

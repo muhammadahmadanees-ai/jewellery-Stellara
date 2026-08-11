@@ -140,7 +140,8 @@ const Admin = () => {
     refcode: '',
     order: 0,
     stock: '',
-    show_sizes: true
+    show_sizes: true,
+    is_bestseller: false
   });
   const [imageUrlInput, setImageUrlInput] = useState('');
 
@@ -266,6 +267,30 @@ const Admin = () => {
       setProductsList(prev => prev.map(p => p.id === productId ? { ...p, stock: targetStock } : p));
     } catch (e) {
       console.warn("Failed to toggle unlimited stock", e);
+    }
+  };
+
+  const handleSetFeaturedBestSeller = async (productId) => {
+    if (!productId) return;
+    try {
+      const { error } = await supabase.from('products').update({ is_bestseller: true }).eq('id', productId);
+      if (error) throw error;
+      
+      setAllProductsList(prev => prev.map(p => p.id === productId ? { ...p, is_bestseller: true } : p));
+      setProductsList(prev => prev.map(p => p.id === productId ? { ...p, is_bestseller: true } : p));
+      
+      setAdminAlert({
+        open: true,
+        title: "Success",
+        message: "Product featured as Best Seller successfully!"
+      });
+    } catch (e) {
+      console.warn("Failed to set featured best seller", e);
+      setAdminAlert({
+        open: true,
+        title: "Error",
+        message: "Failed to set featured best seller: " + e.message
+      });
     }
   };
 
@@ -488,7 +513,8 @@ const Admin = () => {
       refcode: prodFormData.refcode,
       order: Number(prodFormData.order) || 0,
       stock: prodFormData.stock === '' || prodFormData.stock === null ? null : Number(prodFormData.stock),
-      show_sizes: prodFormData.show_sizes
+      show_sizes: prodFormData.show_sizes,
+      is_bestseller: prodFormData.is_bestseller || false
     };
 
     try {
@@ -538,7 +564,8 @@ const Admin = () => {
       refcode: prod.refcode || '',
       order: prod.order || 0,
       stock: prod.stock !== null && prod.stock !== undefined ? prod.stock : '',
-      show_sizes: prod.show_sizes !== undefined ? prod.show_sizes : true
+      show_sizes: prod.show_sizes !== undefined ? prod.show_sizes : true,
+      is_bestseller: prod.is_bestseller || false
     });
     setIsProdModalOpen(true);
   };
@@ -2092,6 +2119,54 @@ STELLARA`;
 
     const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
+    // Calculate best selling product based on actual order items
+    const productSales = {};
+    financialBreakdownList.forEach(item => {
+      if (item.parsedItems && item.parsedItems.length > 0) {
+        item.parsedItems.forEach(pi => {
+          const itemQty = pi.qty || 1;
+          const itemNameClean = (pi.name || '').toLowerCase().trim();
+          const matchedProduct = allProductsList.find(p => {
+            const pNameClean = (p.name || '').toLowerCase().trim();
+            return pNameClean === itemNameClean || itemNameClean.startsWith(pNameClean) || pNameClean.startsWith(itemNameClean);
+          });
+
+          const pId = matchedProduct ? matchedProduct.id : 'unknown_' + itemNameClean;
+          const pName = matchedProduct ? matchedProduct.name : pi.name;
+          
+          let pImg = '';
+          if (matchedProduct && matchedProduct.img) {
+            try {
+              const parsed = parseProductImages(matchedProduct.img);
+              if (parsed.images && parsed.images.length > 0) pImg = parsed.images[0];
+            } catch(e) {}
+          }
+
+          if (!productSales[pId]) {
+            productSales[pId] = {
+              id: matchedProduct ? matchedProduct.id : null,
+              name: pName,
+              img: pImg,
+              qty: 0,
+              revenue: 0,
+              refcode: matchedProduct ? matchedProduct.refcode : 'N/A',
+              is_bestseller: matchedProduct ? (matchedProduct.is_bestseller || false) : false
+            };
+          }
+          productSales[pId].qty += itemQty;
+          productSales[pId].revenue += (pi.price || 0) * itemQty;
+        });
+      }
+    });
+
+    let bestSeller = null;
+    Object.values(productSales).forEach(ps => {
+      if (ps.name === 'Product' && Object.keys(productSales).length > 1) return;
+      if (!bestSeller || ps.qty > bestSeller.qty || (ps.qty === bestSeller.qty && ps.revenue > bestSeller.revenue)) {
+        bestSeller = ps;
+      }
+    });
+
     return {
       weekCount, weekDelta, lastWeekCount,
       monthCount, monthDelta, lastMonthCount,
@@ -2099,7 +2174,8 @@ STELLARA`;
       weeksData, labels,
       sampleRequests, generalInquiries,
       totalRevenue, totalCost, totalProfit, profitMargin,
-      financialBreakdownList
+      financialBreakdownList,
+      bestSeller
     };
   }, [ordersList, allProductsList]);
 
@@ -2272,6 +2348,90 @@ STELLARA`;
                     {dashboardStats.profitMargin.toFixed(1)}% Margin
                   </span>
               </div>
+              <div className="stat-card" style={{ 
+                gridColumn: '1 / -1',
+                background: 'linear-gradient(135deg, #fffbeb 0%, #fff 100%)',
+                border: '1px solid #fef3c7',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  {dashboardStats.bestSeller?.img ? (
+                    <div style={{ 
+                      width: '60px', 
+                      height: '60px', 
+                      borderRadius: '8px', 
+                      backgroundImage: `url(${dashboardStats.bestSeller.img})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      border: '1px solid #f59e0b'
+                    }} />
+                  ) : (
+                    <div style={{ 
+                      width: '60px', 
+                      height: '60px', 
+                      borderRadius: '8px', 
+                      background: '#f3f4f6', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      border: '1px solid #e5e7eb',
+                      color: '#9ca3af'
+                    }}>
+                      <i className="fas fa-image" style={{ fontSize: '1.5rem' }}></i>
+                    </div>
+                  )}
+                  <div>
+                    <h5 style={{ color: '#d97706', fontSize: '0.8rem', letterSpacing: '0.05em', margin: 0 }}>BEST SELLING PRODUCT (BY SALES)</h5>
+                    <p style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'var(--brand-dark)', margin: '4px 0 2px' }}>
+                      {dashboardStats.bestSeller ? dashboardStats.bestSeller.name : 'No sales data yet'}
+                    </p>
+                    <span style={{ fontSize: '0.85rem', color: '#666' }}>
+                      {dashboardStats.bestSeller ? `${dashboardStats.bestSeller.qty} units sold (Rs. ${dashboardStats.bestSeller.revenue.toLocaleString()} revenue)` : 'Orders with parsed products will appear here.'}
+                    </span>
+                  </div>
+                </div>
+                {dashboardStats.bestSeller && dashboardStats.bestSeller.id && (
+                  <div>
+                    {dashboardStats.bestSeller.is_bestseller ? (
+                      <span style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '6px', 
+                        fontSize: '0.85rem', 
+                        color: '#d97706', 
+                        background: '#fef3c7', 
+                        padding: '6px 12px', 
+                        borderRadius: '20px', 
+                        fontWeight: '600'
+                      }}>
+                        <i className="fas fa-star"></i> Featured on Public Page
+                      </span>
+                    ) : (
+                      <button 
+                        className="btn" 
+                        onClick={() => handleSetFeaturedBestSeller(dashboardStats.bestSeller.id)}
+                        style={{ 
+                          background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', 
+                          color: 'white', 
+                          border: 'none', 
+                          padding: '6px 14px', 
+                          borderRadius: '6px',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ⭐ Feature on Public Page
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="stat-card" style={{ gridColumn: '1 / -1' }}>
                   <h5>MOST RECENT ORDER</h5>
                   <p id="dash-recent-order" style={{ fontSize: '1.1rem', color: '#555', marginTop: '10px' }}>{dashboardStats.recentOrderStr}</p>
@@ -2353,7 +2513,7 @@ STELLARA`;
                     <button className="btn" style={{ background: 'var(--light-bg)', color: 'var(--text-color)', marginRight: '15px' }} onClick={() => setCurrentCollection(null)}><i className="fas fa-arrow-left"></i> Back</button>
                     <h3 style={{ display: 'inline-block' }}>{currentCollection.name || currentCollection.title} Products</h3>
                   </div>
-                  <button className="btn" onClick={() => { setProdFormData({ id: '', name: '', price: '', base_price: '', discount_price: '', description: '', img: '', images: [], colorsInput: '', colorImageMapping: {}, colorStockMapping: {}, sizes: '', refcode: '', order: 0, stock: '', show_sizes: true }); setIsProdModalOpen(true); }}><i className="fas fa-plus"></i> Add Product</button>
+                  <button className="btn" onClick={() => { setProdFormData({ id: '', name: '', price: '', base_price: '', discount_price: '', description: '', img: '', images: [], colorsInput: '', colorImageMapping: {}, colorStockMapping: {}, sizes: '', refcode: '', order: 0, stock: '', show_sizes: true, is_bestseller: false }); setIsProdModalOpen(true); }}><i className="fas fa-plus"></i> Add Product</button>
                 </div>
                 {productsList.length === 0 ? <p>No products found in this collection.</p> : (
                   <ReactSortable 
@@ -3391,6 +3551,13 @@ STELLARA`;
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Stock Quantity</label>
                 <input type="number" min="0" placeholder="Leave empty for unlimited" value={prodFormData.stock} onChange={e => setProdFormData({...prodFormData, stock: e.target.value})} style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px' }} />
                 <span style={{ fontSize: '0.75rem', color: '#999', marginTop: '4px', display: 'block' }}>Leave empty = unlimited stock. Set to 0 = sold out.</span>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: '500' }}>
+                  <input type="checkbox" checked={prodFormData.is_bestseller || false} onChange={e => setProdFormData({...prodFormData, is_bestseller: e.target.checked})} style={{ width: '18px', height: '18px', accentColor: '#d97706', cursor: 'pointer' }} />
+                  ⭐ Featured Best Seller
+                </label>
+                <span style={{ fontSize: '0.75rem', color: '#999', marginLeft: '28px', display: 'block' }}>Feature this product on the public homepage "Best Sellers" section.</span>
               </div>
               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Sort Order</label>

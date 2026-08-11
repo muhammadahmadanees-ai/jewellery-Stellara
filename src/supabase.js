@@ -25,6 +25,13 @@ export const getAllProductsFromCache = () => {
   return all.length > 0 ? all : null;
 };
 
+export const fetchBestSellers = async () => {
+  const { data, error } = await supabase.from('best_seller_products').select('*');
+  if (error) throw error;
+  return data;
+};
+
+
 export const prefetchData = async () => {
   if (cache.prefetchPromise) return cache.prefetchPromise;
 

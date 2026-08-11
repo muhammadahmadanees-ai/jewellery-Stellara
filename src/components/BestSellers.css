@@ -1,0 +1,248 @@
+/* Best Sellers Section Styles */
+.bestsellers-section {
+    padding: 60px 5%;
+    background-color: #fafafc;
+    border-bottom: 1px solid #eaeaea;
+    overflow: hidden;
+}
+
+.bestsellers-header {
+    text-align: center;
+    margin-bottom: 45px;
+    position: relative;
+}
+
+.bestsellers-subtitle {
+    font-family: var(--font-primary);
+    font-size: 0.85rem;
+    letter-spacing: 0.3em;
+    color: var(--brand-gold);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+    display: block;
+}
+
+.bestsellers-title {
+    font-family: var(--font-serif);
+    font-size: 2.5rem;
+    color: var(--brand-dark);
+    margin: 0;
+    font-weight: 400;
+}
+
+.bestsellers-header::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 1px;
+    background-color: var(--brand-gold);
+    margin: 15px auto 0;
+}
+
+/* Grid Layout */
+.bestsellers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+    justify-content: center;
+}
+
+/* For 1 or 2 items, limit the width and center them */
+.bestsellers-grid.few-items {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 320px));
+}
+
+/* Product Card */
+.bestseller-card {
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    border: 1px solid #f1f0ee;
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.bestseller-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 30px rgba(197, 168, 128, 0.12);
+    border-color: var(--brand-gold);
+}
+
+/* Image Container & Badges */
+.bestseller-img-container {
+    width: 100%;
+    aspect-ratio: 1;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    overflow: hidden;
+    background-color: #f7f7f7;
+}
+
+.bestseller-img-zoom {
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    transition: transform 0.8s ease;
+}
+
+.bestseller-card:hover .bestseller-img-zoom {
+    transform: scale(1.06);
+}
+
+/* Ribbon Badge */
+.bestseller-badge {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    color: #ffffff;
+    font-family: var(--font-primary);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.bestseller-discount-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background-color: #000;
+    color: #fff;
+    font-family: var(--font-primary);
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+    z-index: 2;
+}
+
+/* Card Body Content */
+.bestseller-details {
+    padding: 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.bestseller-name {
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    color: var(--brand-dark);
+    margin: 0 0 10px;
+    font-weight: 400;
+    transition: color 0.3s;
+}
+
+.bestseller-card:hover .bestseller-name {
+    color: var(--brand-gold);
+}
+
+.bestseller-desc {
+    font-family: var(--font-primary);
+    font-size: 0.85rem;
+    color: #777;
+    margin-bottom: 18px;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    height: 2.6rem;
+}
+
+.bestseller-price-row {
+    margin-top: auto;
+    margin-bottom: 16px;
+}
+
+.bestseller-price {
+    font-family: var(--font-primary);
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--brand-dark);
+}
+
+.bestseller-original-price {
+    font-size: 0.95rem;
+    text-decoration: line-through;
+    color: #999;
+    margin-right: 10px;
+    font-weight: 400;
+}
+
+.bestseller-sale-price {
+    color: #b45309;
+}
+
+/* Premium Button Action */
+.bestseller-action-btn {
+    font-family: var(--font-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #ffffff;
+    background-color: var(--brand-dark);
+    border: 1px solid var(--brand-dark);
+    padding: 12px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+    width: 100%;
+}
+
+.bestseller-card:hover .bestseller-action-btn {
+    background-color: var(--brand-gold);
+    border-color: var(--brand-gold);
+    box-shadow: 0 4px 12px rgba(197, 168, 128, 0.3);
+}
+
+/* Animations */
+.fade-in-up {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.fade-in-up.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .bestsellers-section {
+        padding: 40px 15px;
+    }
+    .bestsellers-title {
+        font-size: 2rem;
+    }
+    .bestsellers-grid {
+        gap: 20px;
+        grid-template-columns: 1fr;
+        padding: 0 10px;
+    }
+    .bestseller-card {
+        max-width: 400px;
+        margin: 0 auto;
+        width: 100%;
+    }
+}
