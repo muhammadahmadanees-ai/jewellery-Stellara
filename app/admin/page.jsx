@@ -438,7 +438,7 @@ const Admin = () => {
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `collections/${fileName}`;
 
-      const { error } = await supabase.storage.from('images').upload(filePath, file);
+      const { error } = await supabase.storage.from('images').upload(filePath, file, { cacheControl: '31536000' });
       if (error) throw error;
       
       const { data } = supabase.storage.from('images').getPublicUrl(filePath);
@@ -555,7 +555,7 @@ const Admin = () => {
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `products/${fileName}`;
 
-        const { error } = await supabase.storage.from('images').upload(filePath, file);
+        const { error } = await supabase.storage.from('images').upload(filePath, file, { cacheControl: '31536000' });
         if (error) throw error;
         
         const { data } = supabase.storage.from('images').getPublicUrl(filePath);

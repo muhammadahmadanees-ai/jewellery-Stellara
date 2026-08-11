@@ -69,7 +69,7 @@ const CheckoutPage = () => {
 
         const { error: uploadError } = await supabase.storage
           .from('images')
-          .upload(filePath, receiptFile);
+          .upload(filePath, receiptFile, { cacheControl: '31536000' });
 
         if (uploadError) {
           throw uploadError;
