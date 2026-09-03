@@ -330,7 +330,10 @@ export function getProductSchema(product) {
     ? product.images 
     : [product.defaultImg || `${SITE_URL}/hero.png`];
 
-  return {
+  const colorKeys = product.colors ? Object.keys(product.colors) : [];
+  const primaryColor = colorKeys.length > 0 ? colorKeys[0] : null;
+
+  const schema = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     '@id': `${productUrl}#product`,
@@ -340,24 +343,35 @@ export function getProductSchema(product) {
       product.desc ||
       `Buy ${product.name} crafted in radiant China gold with premium zircon sparkle from Stellara Jewellery.`,
     sku: product.refcode || product.id,
-    mpn: product.refcode || product.id,
     brand: {
       '@type': 'Brand',
       name: 'Stellara',
     },
-    material: 'China gold',
+    material: 'China Gold',
     category: product.collectionName || 'Jewellery',
-    offers: {
-      '@type': 'Offer',
-      url: productUrl,
-      priceCurrency: 'PKR',
-      price: effectivePrice,
-      priceValidUntil: '2026-12-31',
-      availability: inStock
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
-      itemCondition: 'https://schema.org/NewCondition',
-      shippingDetails: {
+  };
+
+  if (primaryColor) {
+    schema.color = primaryColor;
+    schema.additionalProperty = [
+      {
+        '@type': 'PropertyValue',
+        name: 'Available Colors',
+        value: colorKeys.join(', '),
+      },
+    ];
+  }
+
+  schema.offers = {
+    '@type': 'Offer',
+    url: productUrl,
+    priceCurrency: 'PKR',
+    price: String(effectivePrice),
+    availability: inStock
+      ? 'https://schema.org/InStock'
+      : 'https://schema.org/OutOfStock',
+    itemCondition: 'https://schema.org/NewCondition',
+    shippingDetails: {
         '@type': 'OfferShippingDetails',
         shippingRate: {
           '@type': 'MonetaryAmount',
@@ -390,8 +404,9 @@ export function getProductSchema(product) {
         returnFees: 'https://schema.org/FreeReturn',
         refundType: 'https://schema.org/ExchangeRefund',
       },
-    },
   };
+
+  return schema;
 }
 
 /**

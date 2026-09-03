@@ -1,17 +1,16 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
-import { supabase, prefetchData, getProductByIdFromCache, fetchCollectionsCached, fetchProductsCached, fetchBestSellers } from '../supabase';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { prefetchData } from '../supabase';
 import Navbar from './Navbar';
 import Hero from './Hero';
 import Collections from './Collections';
-import ProductsView from './ProductsView';
 import Contact from './Contact';
 import FAQ from './FAQ';
 import Footer from './Footer';
 
 // Drawer & Modals
 import MenuDrawer from './MenuDrawer';
-import ProductModal from './ProductModal';
 import OrderModal from './OrderModal';
 import SampleFormModal from './SampleFormModal';
 import Lightbox from './Lightbox';
@@ -27,209 +26,36 @@ const slugify = (text) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 
-const updateURL = (collectionSlug, productId) => {
-  const params = new URLSearchParams();
-  if (collectionSlug) params.set('collection', collectionSlug);
-  if (productId) params.set('product', String(productId));
-  const query = params.toString();
-  window.history.pushState({}, '', query ? `?${query}` : window.location.pathname);
-};
-
 export default function HomePageClient({ initialCollections = [] }) {
-  const [selectedCollection, setSelectedCollection] = useState(null);
+  const router = useRouter();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Modal states
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isSampleFormOpen, setIsSampleFormOpen] = useState(false);
   const [sampleProduct, setSampleProduct] = useState(null);
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const [lightboxImg, setLightboxImg] = useState(null);
   const [lightboxImages, setLightboxImages] = useState([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  // Track whether the URL was set by us (to avoid double-updates)
-  const isUrlNav = useRef(false);
-  const isMounted = useRef(false);
-
-  // ── Sync URL when collection / product changes ───────────────────────────
-  useEffect(() => {
-    if (!isMounted.current) {
-      isMounted.current = true;
-      return;
-    }
-    if (isUrlNav.current) {
-      isUrlNav.current = false;
-      return;
-    }
-    const slug = selectedCollection ? slugify(selectedCollection.name) : null;
-    updateURL(slug, selectedProduct ? selectedProduct.id : null);
-  }, [selectedCollection, selectedProduct]);
-
-  // ── On mount: read URL params and auto-navigate ──────────────────────────
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const collectionSlug = params.get('collection');
-    const productId = params.get('product');
-
-    if (!collectionSlug && !productId) return;
-
-    const loadFromUrl = async () => {
-      try {
-        const collections = await fetchCollectionsCached();
-        const match = collections.find((c) => slugify(c.name) === collectionSlug);
-        if (!match) return;
-
-        const data = {};
-        for (let key in match) {
-          data[key.toLowerCase().replace(/[\s_]+/g, '')] = match[key];
-        }
-        const collectionData = {
-          id: match.id,
-          name: data.name || data.title || 'Unnamed',
-          desc: data.description || data.desc || '',
-          img: data.img || data.imageurl || data.imgurl || data.image || '',
-          parentId: data.parentid || '',
-          type: data.type || 'collection',
-          order: data.order !== undefined ? Number(data.order) : 0,
-        };
-
-        isUrlNav.current = true;
-        setSelectedCollection(collectionData);
-
-        if (productId) {
-          const products = await fetchProductsCached(match.id);
-          const prodRaw = products?.find((p) => String(p.id) === String(productId));
-          if (prodRaw) {
-            const pd = {};
-            for (let key in prodRaw) pd[key.toLowerCase().replace(/[\s_]+/g, '')] = prodRaw[key];
-            const prod = {
-              id: prodRaw.id,
-              name: pd.name || pd.title || 'Unnamed',
-              desc: pd.description || pd.desc || pd.detail || '',
-              img: pd.imageurl || pd.imgurl || pd.image || pd.img || pd.pic || '',
-              sizesImg: pd.sizesimageurl || pd.sizeimage || pd.sizesimage || pd.sizepic || '',
-              sizes: pd.sizes || pd.size || pd.availablesizes || pd.available_sizes || '',
-              refcode: pd.refcode || pd.referencecode || pd.code || pd.refercode || '',
-              price: pd.price || pd.cost || '',
-              discount_price: prodRaw.discount_price || null,
-              stock: prodRaw.stock !== undefined ? prodRaw.stock : null,
-              show_sizes: prodRaw.show_sizes !== undefined ? prodRaw.show_sizes : true,
-              collection: collectionData.name,
-            };
-            setTimeout(() => setSelectedProduct(prod), 400);
-          }
-        }
-      } catch (e) {
-        console.warn('Deep-link navigation failed:', e);
-      }
-    };
-
-    loadFromUrl();
-  }, []);
-
-  const handleOpenProduct = async (prod) => {
-    let fullProd = prod;
-    if (!prod.desc || !prod.refcode || prod.refcode === 'N/A') {
-      const cached = getProductByIdFromCache(prod.id);
-      if (cached) {
-        fullProd = {
-          id: cached.id,
-          name: cached.name || cached.title || 'Unnamed',
-          desc: cached.description || cached.desc || cached.detail || '',
-          img: cached.imageurl || cached.imgurl || cached.image || cached.img || cached.pic || '',
-          sizesImg: cached.sizesimageurl || cached.sizeimage || cached.sizesimage || cached.sizepic || '',
-          sizes:
-            cached.sizes ||
-            cached.size ||
-            cached.availablesizes ||
-            cached.available_sizes ||
-            cached['available sizes'] ||
-            cached['Available Sizes'] ||
-            '',
-          refcode: cached.refcode || cached.referencecode || cached.code || cached.refercode || '',
-          price: cached.price || cached.cost || '',
-          stock: cached.stock !== undefined ? cached.stock : null,
-          show_sizes: cached.show_sizes !== undefined ? cached.show_sizes : true,
-          collection: prod.collection || '',
-        };
-      } else {
-        const { data } = await supabase.from('client_products').select('*').eq('id', prod.id).single();
-        if (data) {
-          fullProd = {
-            id: data.id,
-            name: data.name || data.title || 'Unnamed',
-            desc: data.description || data.desc || data.detail || '',
-            img: data.imageurl || data.imgurl || data.image || data.img || data.pic || '',
-            sizesImg: data.sizesimageurl || data.sizeimage || data.sizesimage || data.sizepic || '',
-            sizes:
-              data.sizes ||
-              data.size ||
-              data.availablesizes ||
-              data.available_sizes ||
-              data['available sizes'] ||
-              data['Available Sizes'] ||
-              '',
-            refcode: data.refcode || data.referencecode || data.code || data.refercode || '',
-            price: data.price || data.cost || '',
-            stock: data.stock !== undefined ? data.stock : null,
-            show_sizes: data.show_sizes !== undefined ? data.show_sizes : true,
-            collection: prod.collection || '',
-          };
-        }
-      }
-    }
-    if (fullProd.stock === undefined && prod.stock !== undefined) fullProd.stock = prod.stock;
-    if (fullProd.show_sizes === undefined && prod.show_sizes !== undefined) fullProd.show_sizes = prod.show_sizes;
-    if (!fullProd.collection && prod.collection) fullProd.collection = prod.collection;
-
-    setSelectedProduct(fullProd);
-    try {
-      let history = [];
-      const stored = localStorage.getItem('stellara_recently_viewed');
-      if (stored) history = JSON.parse(stored);
-      history = history.filter((i) => i.id !== fullProd.id);
-      history.unshift({ ...fullProd });
-      if (history.length > 5) history = history.slice(0, 5);
-      localStorage.setItem('stellara_recently_viewed', JSON.stringify(history));
-      window.dispatchEvent(new Event('recentlyViewedUpdated'));
-    } catch {}
-  };
-
-  const handleCloseProduct = () => {
-    setSelectedProduct(null);
-    if (selectedCollection) {
-      updateURL(slugify(selectedCollection.name), null);
-    }
-  };
-
-  const handleBack = () => {
-    setSelectedCollection(null);
-    window.history.pushState({}, '', window.location.pathname);
-  };
-
-  const handleSelectCollection = (col) => {
-    setSelectedCollection(col);
-    if (col) {
-      updateURL(slugify(col.name), null);
-    }
-  };
-
-  const handleGoCollections = () => {
-    setSelectedCollection(null);
-    window.history.pushState({}, '', window.location.pathname);
-    setTimeout(() => {
-      const el = document.getElementById('collections');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-  };
-
+  // ── On mount: client-side safety net redirect for legacy query parameters ──
   useEffect(() => {
     prefetchData();
 
-    const params = new URLSearchParams(window.location.search);
-    const hasCollectionParam = params.get('collection');
-    const hasProductParam = params.get('product');
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const collectionSlug = params.get('collection');
+      const productId = params.get('product');
+
+      if (productId) {
+        router.replace(`/products/${productId}`);
+        return;
+      }
+      if (collectionSlug) {
+        router.replace(`/collections/${collectionSlug}`);
+        return;
+      }
+    }
 
     const scrollToTarget = (selectorOrId) => {
       const target =
@@ -259,7 +85,30 @@ export default function HomePageClient({ initialCollections = [] }) {
     window.addEventListener('scroll', handleScroll);
 
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [selectedCollection]);
+  }, [router]);
+
+  // Navigate to canonical product route
+  const handleOpenProduct = (prod) => {
+    if (!prod) return;
+    const slug = prod.slug || slugify(prod.name) || prod.id;
+    router.push(`/products/${slug}`);
+  };
+
+  // Navigate to canonical collection route
+  const handleSelectCollection = (col) => {
+    if (!col) return;
+    const slug = col.slug || slugify(col.name) || col.id;
+    router.push(`/collections/${slug}`);
+  };
+
+  const handleGoCollections = () => {
+    const el = document.getElementById('collections');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      router.push('/collections');
+    }
+  };
 
   return (
     <div className="home-page">
@@ -268,7 +117,7 @@ export default function HomePageClient({ initialCollections = [] }) {
           onOrderSamples={() => setIsOrderModalOpen(true)}
           onToggleDrawer={() => setIsDrawerOpen(true)}
           onOpenSearch={() => setIsSearchOpen(true)}
-          onGoHome={handleBack}
+          onGoHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           onGoCollections={handleGoCollections}
         />
 
@@ -279,25 +128,12 @@ export default function HomePageClient({ initialCollections = [] }) {
           onOpenProduct={handleOpenProduct}
         />
 
-        <div style={{ display: !selectedCollection ? 'block' : 'none' }}>
+        <div>
           <Hero />
           <Collections
             initialCollections={initialCollections}
             onSelectCollection={handleSelectCollection}
             onOpenProduct={handleOpenProduct}
-          />
-        </div>
-
-        <div style={{ display: selectedCollection ? 'block' : 'none' }}>
-          <ProductsView
-            collectionData={selectedCollection}
-            onBack={handleBack}
-            onOpenProduct={handleOpenProduct}
-            onOpenLightbox={(img, imgs) => {
-              setLightboxImg(img);
-              setLightboxImages(imgs || []);
-            }}
-            onSelectCollection={handleSelectCollection}
           />
         </div>
 
@@ -331,22 +167,6 @@ export default function HomePageClient({ initialCollections = [] }) {
           <SearchModal
             onClose={() => setIsSearchOpen(false)}
             onOpenProduct={handleOpenProduct}
-          />
-        )}
-
-        {selectedProduct && (
-          <ProductModal
-            product={selectedProduct}
-            onClose={handleCloseProduct}
-            onOpenLightbox={(img, imgs) => {
-              setLightboxImg(img);
-              setLightboxImages(imgs || []);
-            }}
-            onOpenSampleForm={() => {
-              setSampleProduct(selectedProduct);
-              setSelectedProduct(null);
-              setIsSampleFormOpen(true);
-            }}
           />
         )}
 
