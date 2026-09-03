@@ -4,6 +4,13 @@ import { supabase, fetchProductsCached, getProductsCache, fetchCollectionsCached
 import { useCart } from './CartContext';
 import { parseProductImages, getColorHex, isLightColor } from './imageHelper';
 
+const slugify = (text) =>
+  String(text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
 const PRODUCTS_PER_PAGE = 15;
 
 const ShrinkText = ({ text }) => {
@@ -325,7 +332,16 @@ const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox, o
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <a href="#" className="link view-details-btn" onClick={(e) => { e.preventDefault(); onOpenProduct(prod); }}>
+                    <a
+                      href={`/products/${slugify(prod.name)}`}
+                      className="link view-details-btn"
+                      onClick={(e) => {
+                        if (onOpenProduct) {
+                          e.preventDefault();
+                          onOpenProduct(prod);
+                        }
+                      }}
+                    >
                       View Details <span className="arrow-icon">&rarr;</span>
                     </a>
                     <button

@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
 import { supabase, fetchCollectionsCached, fetchProductsCached } from '../supabase';
 import RecentlyViewed from './RecentlyViewed';
 
@@ -334,27 +335,26 @@ const MenuDrawer = ({ isOpen, onClose, onSelectCollection, onOpenProduct }) => {
           {/* 2. Navigation Links */}
           <div className="drawer-section">
             <h4 className="drawer-section-title">Navigation</h4>
-            <ul className="drawer-nav-links">
+            <ul className="drawer-nav-list">
               <li>
-                <a href="#" onClick={(e) => { e.preventDefault(); onClose(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                <Link href="/" onClick={() => onClose()}>
                   <i className="fas fa-home section-link-icon"></i> Home
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#collections" onClick={() => onClose()}>
+                <Link href="/collections" onClick={() => onClose()}>
                   <i className="fas fa-cubes section-link-icon"></i> Collections
-                </a>
+                </Link>
               </li>
-
               <li>
-                <a href="#faq" onClick={() => onClose()}>
+                <Link href="/faq" onClick={() => onClose()}>
                   <i className="fas fa-question-circle section-link-icon"></i> FAQ
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#contact" onClick={() => onClose()}>
+                <Link href="/contact" onClick={() => onClose()}>
                   <i className="fas fa-envelope section-link-icon"></i> Contact
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -363,7 +363,10 @@ const MenuDrawer = ({ isOpen, onClose, onSelectCollection, onOpenProduct }) => {
           <div className="drawer-section">
             <h4 className="drawer-section-title">Collections Catalog</h4>
             {loading ? (
-              <p style={{ fontSize: '0.85rem', color: '#888', padding: '10px 0' }}>Loading catalog...</p>
+              <div style={{ padding: '12px 0', color: '#888', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fas fa-circle-notch fa-spin"></i>
+                <span style={{ fontSize: '0.85rem' }}>Loading collections...</span>
+              </div>
             ) : (
               <div className="drawer-tree-container">
                 {renderTreeNodes(treeRoots)}

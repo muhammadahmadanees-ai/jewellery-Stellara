@@ -1,15 +1,15 @@
 import './globals.css';
 import { CartProvider } from '../src/components/CartContext';
+import { getOrganizationSchema, getWebSiteSchema } from '../src/lib/data';
 
 export const metadata = {
   metadataBase: new URL('https://www.jewellerystellara.com'),
   title: {
-    default: 'Stellara | Artificial Jewellery & China Gold Jewellery Online | jewellerystellara.com',
-    // Note: domain shown in title for brand recognition in SERPs
+    default: 'Stellara | Artificial Jewellery & China Gold Jewellery Online',
     template: '%s | Stellara Jewellery',
   },
   description:
-    'Shop Stellara – your #1 destination for artificial jewellery, China gold jewellery, imitation jewellery sets, necklaces, earrings & rings. Premium quality at affordable prices.',
+    'Shop Stellara – your destination for artificial jewellery, China gold jewellery, imitation jewellery sets, necklaces, earrings and rings.',
   keywords: [
     'artificial jewellery',
     'china gold jewellery',
@@ -52,9 +52,9 @@ export const metadata = {
   openGraph: {
     title: 'Stellara | Artificial Jewellery & China Gold Jewellery Online',
     description:
-      'Shop Stellara – your #1 destination for artificial jewellery, China gold jewellery, imitation jewellery sets, necklaces, earrings & rings.',
+      'Shop Stellara – your destination for artificial jewellery, China gold jewellery, imitation jewellery sets, necklaces, earrings and rings.',
     url: 'https://www.jewellerystellara.com',
-    siteName: 'Stellara Jewellery',
+    siteName: 'Stellara',
     images: [
       {
         url: 'https://www.jewellerystellara.com/hero.png',
@@ -70,60 +70,19 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'Stellara | Artificial Jewellery & China Gold Jewellery Online',
     description:
-      'Shop Stellara – your #1 destination for artificial jewellery, China gold jewellery, imitation jewellery sets, necklaces, earrings & rings.',
+      'Shop Stellara – your destination for artificial jewellery, China gold jewellery, imitation jewellery sets, necklaces, earrings and rings.',
     images: ['/hero.png'],
-    creator: '@stellara',
+    creator: '@jewellerystellara',
   },
   category: 'shopping',
 };
 
-// JSON-LD Structured Data for Google Rich Results
-const jsonLd = {
+// Sitewide JSON-LD (@graph containing Organization and WebSite)
+const siteJsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
-    {
-      '@type': 'Organization',
-      '@id': 'https://www.jewellerystellara.com/#organization',
-      name: 'Stellara Jewellery',
-      url: 'https://www.jewellerystellara.com',
-      logo: {
-        '@type': 'ImageObject',
-        url: 'https://www.jewellerystellara.com/logo.png',
-      },
-      description:
-        'Stellara is a premium online store for artificial jewellery, China gold jewellery, and imitation jewellery sets.',
-      sameAs: [],
-    },
-    {
-      '@type': 'WebSite',
-      '@id': 'https://www.jewellerystellara.com/#website',
-      url: 'https://www.jewellerystellara.com',
-      name: 'Stellara Jewellery',
-      description:
-        'Shop artificial jewellery, China gold jewellery, necklaces, earrings & rings at Stellara.',
-      publisher: { '@id': 'https://www.jewellerystellara.com/#organization' },
-      potentialAction: {
-        '@type': 'SearchAction',
-        target: {
-          '@type': 'EntryPoint',
-          urlTemplate: 'https://www.jewellerystellara.com/?q={search_term_string}',
-        },
-        'query-input': 'required name=search_term_string',
-      },
-    },
-    {
-      '@type': 'Store',
-      '@id': 'https://www.jewellerystellara.com/#store',
-      name: 'Stellara Jewellery',
-      url: 'https://www.jewellerystellara.com',
-      description:
-        'Buy artificial jewellery & China gold jewellery online. Explore necklaces, earrings, rings and jewellery sets at Stellara.',
-      image: 'https://www.jewellerystellara.com/hero.png',
-      priceRange: '$$',
-      currenciesAccepted: 'PKR',
-      paymentAccepted: 'Cash, Credit Card, Bank Transfer',
-      hasMap: '',
-    },
+    getOrganizationSchema(),
+    getWebSiteSchema(),
   ],
 };
 
@@ -137,10 +96,10 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <link href="https://fonts.cdnfonts.com/css/blanka" rel="stylesheet" />
-        {/* JSON-LD Structured Data */}
+        {/* Sitewide JSON-LD Structured Data */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
         />
       </head>
       <body>

@@ -3,6 +3,13 @@ import React, { useEffect, useState } from 'react';
 import { supabase, fetchCollectionsCached, getCollectionsCache, fetchBestSellers } from '../supabase';
 import RecentlyViewed from './RecentlyViewed';
 
+const slugify = (text) =>
+  String(text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
 // Inline compact best sellers widget for sidebar
 const SidebarBestSellers = ({ onOpenProduct }) => {
   const [items, setItems] = React.useState([]);
@@ -81,7 +88,7 @@ const SidebarBestSellers = ({ onOpenProduct }) => {
   );
 };
 
-const Collections = ({ onSelectCollection, onOpenProduct }) => {
+const Collections = ({ initialCollections = null, onSelectCollection, onOpenProduct }) => {
   // Construct hierarchy dynamically
   const buildTree = (items) => {
     const itemMap = {};
@@ -112,6 +119,7 @@ const Collections = ({ onSelectCollection, onOpenProduct }) => {
   };
 
   const processCollectionsData = (querySnapshot) => {
+    if (!querySnapshot || !Array.isArray(querySnapshot)) return { cols: [], roots: [], initialExpanded: {} };
     const cols = [];
     querySnapshot.forEach((rawData) => {
       const data = {};
@@ -126,7 +134,7 @@ const Collections = ({ onSelectCollection, onOpenProduct }) => {
         name: catName,
         desc: data.description || data.desc || data.detail || '',
         img: imgUrl,
-        parentId: data.parentid || '',
+        parentId: data.parentid || data.parent_id || '',
         type: data.type || 'collection', // default to collection
         order: data.order !== undefined ? Number(data.order) : 0
       });
@@ -146,7 +154,7 @@ const Collections = ({ onSelectCollection, onOpenProduct }) => {
   };
 
   // Sync initialization to avoid flicker
-  const cachedSnapshot = getCollectionsCache();
+  const cachedSnapshot = initialCollections || getCollectionsCache();
   const initialData = cachedSnapshot ? processCollectionsData(cachedSnapshot) : null;
 
   const [collections, setCollections] = useState(initialData ? initialData.cols : []);
@@ -290,7 +298,9 @@ const Collections = ({ onSelectCollection, onOpenProduct }) => {
         </div>
 
         {loading && !loadTimeout ? (
-          <p style={{ textAlign: 'center', padding: '3rem 0' }}>Loading collections catalog...</p>
+          <div style={{ textAlign: 'center', padding: '3rem 0', color: '#888' }}>
+            <i className="fas fa-circle-notch fa-spin fa-2x"></i>
+          </div>
         ) : (error || loadTimeout || collections.length === 0) ? (
           <div style={{
             maxWidth: '550px',
@@ -447,7 +457,21 @@ const Collections = ({ onSelectCollection, onOpenProduct }) => {
                           </div>
                           <h3 style={{ fontWeight: 'bold' }}>{item.name}</h3>
                           <p className="card-desc">{item.desc}</p>
-                          <a href="#" className="link view-products-btn" onClick={(e) => { e.preventDefault(); e.stopPropagation(); selectNode(item); }}>
+                          <a 
+                            href={isCategory ? '#' : `/collections/${slugify(item.name)}`} 
+                            className="link view-products-btn" 
+                            onClick={(e) => { 
+                              if (isCategory) { 
+                                e.preventDefault(); 
+                                e.stopPropagation(); 
+                                selectNode(item); 
+                              } else if (onSelectCollection) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                selectNode(item);
+                              }
+                            }}
+                          >
                             {isCategory ? 'Open Folder' : 'View Products'} <span className="arrow-icon">&rarr;</span>
                           </a>
                         </div>

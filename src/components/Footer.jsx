@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from 'react';
+import Link from 'next/link';
 import TermsModal from './TermsModal';
 import PrivacyModal from './PrivacyModal';
 import RefundModal from './RefundModal';
@@ -13,10 +14,15 @@ const Footer = () => {
     <footer>
       <div className="container footer-content">
         <div className="footer-brand">
-          <h3>Stellara Jewellery</h3>
-          <p>&copy; 2026 Stellara Jewellery. All rights reserved.</p>
+          <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <h3 style={{ fontFamily: 'var(--font-serif)', color: 'var(--brand-gold)' }}>Stellara Jewellery</h3>
+          </Link>
+          <p>&copy; {new Date().getFullYear()} Stellara Jewellery. All rights reserved.</p>
         </div>
         <div className="footer-links">
+          <Link href="/collections">Collections</Link>
+          <Link href="/faq">FAQ</Link>
+          <Link href="/contact">Contact</Link>
           <a href="#" onClick={(e) => { e.preventDefault(); setIsPrivacyOpen(true); }}>Privacy Policy</a>
           <a href="#" onClick={(e) => { e.preventDefault(); setIsRefundOpen(true); }}>Refund Policy</a>
           <a href="#" onClick={(e) => { e.preventDefault(); setIsTermsOpen(true); }}>Terms of Service</a>

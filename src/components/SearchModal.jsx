@@ -1,7 +1,17 @@
+"use client";
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase, getAllProductsFromCache } from '../supabase';
 
+const slugify = (text) =>
+  String(text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
 const SearchModal = ({ onClose, onOpenProduct }) => {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -25,9 +35,10 @@ const SearchModal = ({ onClose, onOpenProduct }) => {
       const allProds = getAllProductsFromCache();
       if (allProds) {
         const lowerQuery = query.toLowerCase();
-        const localResults = allProds.filter(p => 
-          (p.name || '').toLowerCase().includes(lowerQuery) || 
-          (p.refcode || '').toLowerCase().includes(lowerQuery)
+        const localResults = allProds.filter(
+          (p) =>
+            (p.name || '').toLowerCase().includes(lowerQuery) ||
+            (p.refcode || '').toLowerCase().includes(lowerQuery)
         );
         setResults(localResults);
         setLoading(false);
@@ -39,7 +50,7 @@ const SearchModal = ({ onClose, onOpenProduct }) => {
           .from('client_products')
           .select('*')
           .or(`name.ilike.%${query}%,refcode.ilike.%${query}%`);
-          
+
         if (error) throw error;
         setResults(data || []);
       } catch (err) {
@@ -69,24 +80,30 @@ const SearchModal = ({ onClose, onOpenProduct }) => {
       sizes: data.sizes || data.size || data.availablesizes || data.available_sizes || '',
       refcode: data.refcode || data.referencecode || data.code || data.refercode || '',
       price: data.price || data.cost || '',
-      discount_price: rawData.discount_price !== undefined ? rawData.discount_price : data.discountprice || null
+      discount_price: rawData.discount_price !== undefined ? rawData.discount_price : data.discountprice || null,
     };
     onClose();
-    onOpenProduct(product);
+    if (onOpenProduct) {
+      onOpenProduct(product);
+    } else {
+      router.push(`/products/${slugify(product.name)}`);
+    }
   };
 
   return (
     <div className="modal show" onClick={onClose} style={{ zIndex: 10000, alignItems: 'flex-start', paddingTop: '10vh' }}>
-      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: '90%', maxWidth: '600px', padding: '1.5rem', borderRadius: '12px' }}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: '90%', maxWidth: '600px', padding: '1.5rem', borderRadius: '12px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>Search Products</h3>
-          <button className="close-btn" onClick={onClose} style={{ position: 'static', padding: '0' }}>&times;</button>
+          <button className="close-btn" onClick={onClose} style={{ position: 'static', padding: '0' }}>
+            &times;
+          </button>
         </div>
         <div style={{ position: 'relative' }}>
           <i className="fas fa-search" style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#888' }}></i>
-          <input 
+          <input
             ref={inputRef}
-            type="text" 
+            type="text"
             placeholder="Search by name or code..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -98,40 +115,41 @@ const SearchModal = ({ onClose, onOpenProduct }) => {
           {!loading && query.trim() && results.length === 0 && (
             <p style={{ textAlign: 'center', color: '#888', padding: '1rem 0' }}>No products found for "{query}"</p>
           )}
-          {!loading && results.map(item => (
-            <div 
-              key={item.id} 
-              onClick={() => handleResultClick(item)}
-              style={{ display: 'flex', alignItems: 'center', padding: '10px', borderBottom: '1px solid #eee', cursor: 'pointer', transition: 'background 0.2s' }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9f9f9'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              {(() => {
-                const getDisplayImg = (imgField) => {
-                  if (!imgField) return '';
-                  if (imgField.trim().startsWith('{')) {
-                    try {
-                      const parsed = JSON.parse(imgField);
-                      return (parsed.images && parsed.images[0]) || '';
-                    } catch (e) {}
-                  }
-                  return imgField;
-                };
-                const displayImg = getDisplayImg(item.img);
-                return displayImg ? (
-                  <img src={displayImg} alt={item.name} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px', marginRight: '15px' }} />
-                ) : (
-                  <div style={{ width: '50px', height: '50px', backgroundColor: '#eee', borderRadius: '4px', marginRight: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <i className="fas fa-image" style={{ color: '#ccc' }}></i>
+          {!loading &&
+            results.map((item) => {
+              const getDisplayImg = (imgField) => {
+                if (!imgField) return '';
+                if (imgField.trim().startsWith('{')) {
+                  try {
+                    const parsed = JSON.parse(imgField);
+                    return (parsed.images && parsed.images[0]) || '';
+                  } catch (e) {}
+                }
+                return imgField;
+              };
+              const displayImg = getDisplayImg(item.img || '');
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => handleResultClick(item)}
+                  style={{ display: 'flex', alignItems: 'center', padding: '10px', borderBottom: '1px solid #eee', cursor: 'pointer', transition: 'background 0.2s' }}
+                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f9f9f9')}
+                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  {displayImg ? (
+                    <img src={displayImg} alt={item.name} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px', marginRight: '15px' }} />
+                  ) : (
+                    <div style={{ width: '50px', height: '50px', backgroundColor: '#eee', borderRadius: '4px', marginRight: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <i className="fas fa-image" style={{ color: '#ccc' }}></i>
+                    </div>
+                  )}
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '1rem', color: '#333' }}>{item.name}</h4>
+                    {item.refcode && <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#888' }}>Code: {item.refcode}</p>}
                   </div>
-                );
-              })()}
-              <div>
-                <h4 style={{ margin: 0, fontSize: '1rem', color: '#333' }}>{item.name}</h4>
-                {item.refcode && <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#888' }}>Code: {item.refcode}</p>}
-              </div>
-            </div>
-          ))}
+                </div>
+              );
+            })}
         </div>
       </div>
     </div>
