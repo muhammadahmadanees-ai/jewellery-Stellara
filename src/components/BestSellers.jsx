@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { parseProductImages } from './imageHelper';
+import { slugify } from '../lib/data';
 import './BestSellers.css';
 
 const BestSellers = ({ products, onOpenProduct }) => {
@@ -22,6 +24,7 @@ const BestSellers = ({ products, onOpenProduct }) => {
           const hasDiscount = prod.discount_price !== null && prod.discount_price !== undefined && Number(prod.discount_price) > 0;
           const displayPrice = hasDiscount ? Number(prod.discount_price) : Number(prod.price);
           const originalPrice = Number(prod.price);
+          const productHref = `/products/${prod.slug || slugify(prod.name) || prod.id}`;
 
           // Calculate discount percentage
           const discountPct = hasDiscount ? Math.round((1 - (displayPrice / originalPrice)) * 100) : 0;
@@ -30,7 +33,7 @@ const BestSellers = ({ products, onOpenProduct }) => {
             <div 
               key={prod.id} 
               className="bestseller-card"
-              onClick={() => onOpenProduct(prod)}
+              onClick={() => onOpenProduct && onOpenProduct(prod)}
             >
               {/* Badge */}
               <div className="bestseller-badge">
@@ -45,7 +48,17 @@ const BestSellers = ({ products, onOpenProduct }) => {
               )}
 
               {/* Image */}
-              <div className="bestseller-img-container">
+              <Link
+                href={productHref}
+                onClick={(e) => {
+                  if (onOpenProduct) {
+                    e.preventDefault();
+                    onOpenProduct(prod);
+                  }
+                }}
+                className="bestseller-img-container"
+                style={{ display: 'block', cursor: 'pointer' }}
+              >
                 {displayImg ? (
                   <div 
                     className="bestseller-img-zoom"
@@ -64,11 +77,22 @@ const BestSellers = ({ products, onOpenProduct }) => {
                     <i className="fas fa-image" style={{ fontSize: '2rem' }}></i>
                   </div>
                 )}
-              </div>
+              </Link>
 
               {/* Card details */}
               <div className="bestseller-details">
-                <h3 className="bestseller-name">{prod.name}</h3>
+                <Link
+                  href={productHref}
+                  onClick={(e) => {
+                    if (onOpenProduct) {
+                      e.preventDefault();
+                      onOpenProduct(prod);
+                    }
+                  }}
+                  style={{ textDecoration: 'none', color: 'inherit' }}
+                >
+                  <h3 className="bestseller-name" style={{ cursor: 'pointer' }}>{prod.name}</h3>
+                </Link>
                 <p className="bestseller-desc">{prod.description || prod.desc || 'Premium hand-crafted jewellery piece.'}</p>
                 
                 <div className="bestseller-price-row">
@@ -92,7 +116,7 @@ const BestSellers = ({ products, onOpenProduct }) => {
                   className="bestseller-action-btn"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onOpenProduct(prod);
+                    onOpenProduct && onOpenProduct(prod);
                   }}
                 >
                   View Details

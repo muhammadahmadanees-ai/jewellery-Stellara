@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from './CartContext';
 import { getColorHex, isLightColor } from './imageHelper';
@@ -7,9 +7,16 @@ import Lightbox from './Lightbox';
 import SampleFormModal from './SampleFormModal';
 import WhatsAppButton from './WhatsAppButton';
 import ScrollToTop from './ScrollToTop';
+import { recordRecentlyViewed } from '../lib/recentlyViewed';
 
 export default function ProductDetailClient({ product, relatedProducts = [] }) {
   const { addToCart, setIsCartOpen } = useCart();
+
+  useEffect(() => {
+    if (product && product.id) {
+      recordRecentlyViewed(product);
+    }
+  }, [product]);
 
   const [selectedImage, setSelectedImage] = useState(product.defaultImg || (product.images && product.images[0]) || '');
   const [selectedColor, setSelectedColor] = useState(() => {

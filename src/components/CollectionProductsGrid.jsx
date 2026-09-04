@@ -1,10 +1,13 @@
 "use client";
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCart } from './CartContext';
 import { getColorHex, isLightColor } from './imageHelper';
+import { slugify } from '../lib/data';
 
 export default function CollectionProductsGrid({ products = [] }) {
+  const router = useRouter();
   const { addToCart } = useCart();
   const [addedIds, setAddedIds] = useState({});
   const [hoveredImages, setHoveredImages] = useState({});
@@ -51,16 +54,26 @@ export default function CollectionProductsGrid({ products = [] }) {
         const hasColors = prod.colors && Object.keys(prod.colors).length > 0;
         const effectivePrice = prod.discountPrice || prod.price;
         const hasDiscount = prod.discountPrice && prod.discountPrice < prod.price;
+        const productHref = `/products/${prod.slug || slugify(prod.name) || prod.id}`;
+
+        const handleCardClick = (e) => {
+          if (e.target.closest('button') || e.target.closest('.color-swatch-dot')) {
+            return;
+          }
+          router.push(productHref);
+        };
 
         return (
           <div
             className="collection-card fade-in-up"
             key={prod.id}
+            onClick={handleCardClick}
             style={{
               opacity: prod.stock === 0 ? 0.65 : 1,
               position: 'relative',
               display: 'flex',
               flexDirection: 'column',
+              cursor: 'pointer',
             }}
           >
             {prod.stock === 0 && (
@@ -105,7 +118,7 @@ export default function CollectionProductsGrid({ products = [] }) {
 
             {/* Product Image Link */}
             <Link
-              href={`/products/${prod.slug}`}
+              href={productHref}
               style={{
                 textDecoration: 'none',
                 display: 'block',
@@ -148,17 +161,27 @@ export default function CollectionProductsGrid({ products = [] }) {
             </Link>
 
             {/* Product Card Content */}
-            <div className="card-content" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+            <div
+              className="card-content"
+              onClick={handleCardClick}
+              style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', cursor: 'pointer' }}
+            >
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%', gap: '0.3rem' }}>
                 <Link
-                  href={`/products/${prod.slug}`}
+                  href={productHref}
+                  className="product-title-link"
                   style={{
                     textDecoration: 'none',
                     color: 'inherit',
                     fontWeight: '700',
                     fontSize: '1.15rem',
                     lineHeight: '1.3',
+                    cursor: 'pointer',
+                    display: 'inline-block',
+                    transition: 'color 0.2s ease',
                   }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#8B1A1A')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'inherit')}
                 >
                   {prod.name}
                 </Link>
@@ -254,7 +277,7 @@ export default function CollectionProductsGrid({ products = [] }) {
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '0.4rem' }}>
                 <Link
-                  href={`/products/${prod.slug}`}
+                  href={productHref}
                   className="link view-details-btn"
                   style={{
                     fontSize: '0.85rem',

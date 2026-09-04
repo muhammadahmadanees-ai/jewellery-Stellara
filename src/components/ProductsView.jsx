@@ -261,7 +261,18 @@ const ProductsView = ({ collectionData, onBack, onOpenProduct, onOpenLightbox, o
                   style={{ cursor: 'pointer' }}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%', gap: '0.4rem' }}>
-                    <ShrinkText text={prod.name} />
+                    <a
+                      href={`/products/${slugify(prod.name)}`}
+                      onClick={(e) => {
+                        if (onOpenProduct) {
+                          e.preventDefault();
+                          onOpenProduct(prod);
+                        }
+                      }}
+                      style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer', width: '100%' }}
+                    >
+                      <ShrinkText text={prod.name} />
+                    </a>
                     {prod.refcode && <span className="ref-code" style={{ fontWeight: 'normal' }}>{prod.refcode}</span>}
                   </div>
                   <p className="card-desc" style={{ marginTop: '0.4rem' }}>{prod.desc}</p>

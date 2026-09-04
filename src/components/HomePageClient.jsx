@@ -18,6 +18,7 @@ import SearchModal from './SearchModal';
 import ScrollToTop from './ScrollToTop';
 import WhatsAppButton from './WhatsAppButton';
 import CartDrawer from './CartDrawer';
+import { recordRecentlyViewed } from '../lib/recentlyViewed';
 
 const slugify = (text) =>
   String(text || '')
@@ -90,6 +91,7 @@ export default function HomePageClient({ initialCollections = [] }) {
   // Navigate to canonical product route
   const handleOpenProduct = (prod) => {
     if (!prod) return;
+    recordRecentlyViewed(prod);
     const slug = prod.slug || slugify(prod.name) || prod.id;
     router.push(`/products/${slug}`);
   };
